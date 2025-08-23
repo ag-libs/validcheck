@@ -69,13 +69,16 @@
           <version>2.45.0</version>
           <configuration>
             <java>
-              <googleJavaFormat />
+              <googleJavaFormat/>
             </java>
             <markdown>
               <includes>
                 <include>**/*.md</include>
               </includes>
-              <flexmark />
+              <excludes>
+                <exclude>**/target/**/*.md</exclude>
+              </excludes>
+              <flexmark/>
             </markdown>
           </configuration>
           <executions>

@@ -12,7 +12,7 @@ package io.github.validcheck;
  *   <li>Quick null checks with {@link #requireNotNull(Object, String)}
  * </ul>
  *
- * @since 0.9.0
+ * @since 1.0.0
  */
 public final class ValidCheck {
 

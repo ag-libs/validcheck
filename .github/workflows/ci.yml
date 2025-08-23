@@ -40,6 +40,10 @@ jobs:
         if: ${{ matrix.java == '21' && matrix.os == 'ubuntu-latest' }}
         run: mvn clean verify --batch-mode -Pcoverage
 
+      - name: Verify javadoc and source generation
+        if: ${{ matrix.java == '21' && matrix.os == 'ubuntu-latest' }}
+        run: mvn install -DskipTests javadoc:jar source:jar-no-fork
+
       - name: Sonar
         run: mvn sonar:sonar -Dsonar.projectKey=validcheck -Dsonar.organization=validcheck
         if: ${{ matrix.java == '21' && matrix.os == 'ubuntu-latest' }}

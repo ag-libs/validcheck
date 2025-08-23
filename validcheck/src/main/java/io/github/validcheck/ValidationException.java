@@ -22,13 +22,16 @@ import java.util.List;
  * }
  * }</pre>
  *
- * @since 0.9.0
+ * @since 1.0.0
  * @see ValidCheck
  * @see Validator
  * @see BatchValidator
  */
 public class ValidationException extends RuntimeException {
+  /** Whether to fill stack traces for performance optimization. */
   private final boolean fillStackTrace;
+
+  /** Immutable list of all validation error messages. */
   private final List<String> errors;
 
   /**

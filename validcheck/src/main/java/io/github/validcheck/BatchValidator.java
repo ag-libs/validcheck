@@ -58,7 +58,7 @@ import java.util.regex.Pattern;
  * }
  * }</pre>
  *
- * @since 0.9.0
+ * @since 1.0.0
  * @see ValidCheck#check()
  * @see Validator
  * @see ValidationException

@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  *          .validate(); // Throws ValidationException with all collected errors
  * }</pre>
  *
- * <h3>Customization</h3>
+ * <h2>Customization</h2>
  *
  * <p>This class can be extended to create custom validators with specialized behavior:
  *
@@ -60,7 +60,7 @@ import java.util.regex.Pattern;
  * }
  * }</pre>
  *
- * @since 0.9.0
+ * @since 1.0.0
  * @see ValidCheck#require()
  * @see ValidCheck#check()
  * @see BatchValidator
@@ -71,10 +71,16 @@ public class Validator {
   private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
   private static final int MAX_DISPLAYED_VALUE_LENGTH = 100;
 
+  /** Whether to include actual values in error messages. */
   protected final boolean includeValues;
+
+  /** Whether to throw immediately on first validation failure. */
   protected final boolean failFast;
+
+  /** Whether to fill stack traces in thrown exceptions. */
   protected final boolean fillStackTrace;
 
+  /** List of collected validation errors. */
   protected final List<String> errors;
 
   /**
@@ -116,6 +122,7 @@ public class Validator {
     return error;
   }
 
+  /** Throws ValidationException if any errors have been collected. */
   protected void validate() {
     if (!errors.isEmpty()) {
       final var errorMessage = String.join("; ", errors);
