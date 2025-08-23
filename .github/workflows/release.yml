@@ -93,7 +93,7 @@ jobs:
 
           # Update README.md version references
           sed -i "s/<version>.*<\/version>/<version>$VERSION<\/version>/g" README.md
-          sed -i "s/validcheck-core:[0-9]\+\.[0-9]\+\.[0-9]\+/validcheck-core:$VERSION/g" README.md
+          sed -i "s/validcheck:[0-9]\+\.[0-9]\+\.[0-9]\+/validcheck:$VERSION/g" README.md
 
           # Commit and push the README update
           git add README.md
@@ -104,4 +104,4 @@ jobs:
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "🎉 Successfully released ValidCheck $LATEST_TAG to Maven Central!"
-          echo "📦 Available at: https://central.sonatype.com/artifact/io.github.validcheck/validcheck-core"
+          echo "📦 Available at: https://central.sonatype.com/artifact/io.github.validcheck/validcheck"

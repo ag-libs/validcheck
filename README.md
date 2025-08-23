@@ -4,129 +4,201 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=validcheck&metric=coverage)](https://sonarcloud.io/summary/new_code?id=validcheck)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=validcheck&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=validcheck)
 
-A lightweight Java runtime validation library designed for method and constructor parameter
-validation without reflection or external frameworks. Perfect for Java Records and traditional
-classes.
+A **simple**, **IDE-friendly**, **fluent** and **extensible** Java validation library for runtime parameter validation. Zero dependencies, perfect for records and constructors.
 
-Validating input parameters is essential for reliable code. Bad inputs cause bugs, security issues,
-and cryptic errors that pop up far from where the problem started. Catch these issues early at
-method and constructor boundaries with clear, helpful error messages.
+## Why ValidCheck?
 
-Constructor validation is especially powerful because it stops invalid objects from being created in
-the first place. Your domain objects stay consistent from day one, making your code more predictable
-and much easier to debug.
+**Simple** - Clean API with intuitive method names  
+**IDE-friendly** - Full autocomplete support and type safety  
+**Fluent** - Method chaining for readable validation code  
+**Extensible** - Easy to add custom validation methods
 
-## Key Features
-
-- **Zero dependencies** - No reflection, no external frameworks, minimal overhead
-- **Fluent API** - Type-safe method chaining:
-  `check(value, "name").notNullOrEmpty().lengthBetween(2, 50)`
-- **Fail-fast or Batch** - Stop on first error or collect all validation errors
-- **Explicit validation** - Clear validation logic exactly where you need it
+```java
+// Simple and readable
+ValidCheck.require()
+    .notNull(username, "username")
+    .hasLength(username, 3, 20, "username")
+    .matches(email, "^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
+    .isPositive(age, "age");
+```
 
 ## Installation
 
-Add to your Maven `pom.xml`:
+Maven:
 
 ```xml
-
 <dependency>
   <groupId>io.github.validcheck</groupId>
-  <artifactId>validcheck-core</artifactId>
+  <artifactId>validcheck</artifactId>
   <version>0.9.0</version>
 </dependency>
 ```
 
-Or Gradle `build.gradle`:
+Gradle:
 
 ```gradle
-implementation 'io.github.validcheck:validcheck-core:0.9.0'
+implementation 'io.github.validcheck:validcheck:0.9.0'
 ```
 
-## Quick Start with Java Records
+## Quick Start
 
-Perfect for immutable data validation in record compact constructors:
+### Java Record Validation
 
-```java
-import static io.github.validcheck.Check.check;
+ValidCheck is particularly powerful with Java records, where validation in the compact constructor ensures immutable objects are never created in an invalid state. This prevents invalid data from propagating through your application and makes debugging much easier since validation failures happen immediately at object creation.
 
-public record User(String name, String email, int age) {
-
-  public User {
-    check(name, "name").notNullOrEmpty().lengthBetween(2, 50);
-    check(email, "email").notNullOrEmpty().isEmail();
-    check(age, "age").isNonNegative().max(120);
-  }
-
-  // Usage example
-  public static void main(String[] args) {
-    User user = new User("John", "john@example.com", 25); // ✓ Valid
-    // User invalid = new User("", "invalid", -5);        // ✗ Throws ValidationException
-  }
-}
-```
-
-### Batch Validation in Records
+### Record Validation (Fail-Fast)
 
 ```java
-import static io.github.validcheck.Check.batch;
-
-public record CreateUserRequest(String name, String email, Integer age, String phone) {
-
-  public CreateUserRequest {
-    var validation = batch();
-    validation.check(name, "name").notNull().lengthBetween(1, 100);
-    validation.check(email, "email").notNull().isEmail();
-    validation.check(age, "age").notNull().isNonNegative().max(120);
-    validation
-        .check(phone, "phone")
-        .when(
-            phone != null,
-            validator -> validator.satisfies(p -> p.matches("\\d{10}"), "must be 10 digits"));
-
-    if (!validation.hasErrors()) {
-      // check more business logic and fail manually
-      validation.fail("Business logic error");
+public record User(String username, String email, int age) {
+    public User {
+        ValidCheck.require()
+            .notNull(username, "username")
+            .hasLength(username, 3, 20, "username")
+            .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
+            .inRange(age, 13, 120, "age");
     }
-
-    validation.validate(); // Throws with all errors if any validation failed
-  }
-
-  // Usage example
-  public static void main(String[] args) {
-    var request = new CreateUserRequest("John", "john@example.com", 25, "1234567890");
-    // var invalid = new CreateUserRequest("", "invalid", -1, "abc"); // ✗ Throws ValidationException
-  }
 }
 ```
 
-### Chained Batch Validation
-
-Batch validation supports fluent method chaining with Consumer-based validation for cleaner code:
+### Record Validation (Batch - Collect All Errors)
 
 ```java
-import static io.github.validcheck.Check.batch;
-
-public record ProductOrder(String productId, Integer quantity, BigDecimal price, List<String> tags) {
-
-  public ProductOrder {
-    batch()
-        .check(productId, "productId", v -> v.notNull().matches("PROD-\\d+"))
-        .check(quantity, "quantity", v -> v.notNull().isPositive().max(1000))
-        .check(price, "price", v -> v.notNull().isPositive().max(new BigDecimal("10000")))
-        .check(tags, "tags", v -> v.notNull().minSize(1).maxSize(5))
-        .isTrue(price.multiply(new BigDecimal(quantity)).compareTo(new BigDecimal("50000")) <= 0, 
-                "total order value cannot exceed $50,000")
-        .isFalse(tags.contains("discontinued"), "cannot order discontinued products")
-        .validate(); // Collects all errors and throws if any validation failed
-  }
-
-  // Usage example
-  public static void main(String[] args) {
-    var order = new ProductOrder("PROD-123", 5, new BigDecimal("99.99"), List.of("electronics", "gadgets"));
-    // var invalid = new ProductOrder("", 0, BigDecimal.ZERO, List.of()); // ✗ Throws ValidationException with all errors
-  }
+public record UserRegistration(String username, String email, String password) {
+    public UserRegistration {
+        ValidCheck.check()
+            .notNull(username, "username")
+            .hasLength(username, 3, 20, "username")
+            .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
+            .hasLength(password, 8, 100, "password")
+            .matches(password, ".*[A-Z].*", "password")
+            .validate();
+    }
 }
+```
+
+## Core API Design
+
+### Two Validation Strategies
+
+**Fail-Fast** - Stops at first error:
+
+```java
+ValidCheck.require()  // Throws on first validation failure
+    .notNull(value, "field")
+    .isPositive(number, "count");
+```
+
+**Batch** - Collects all errors:
+
+```java
+ValidCheck.check()  // Collects all errors before throwing
+    .notNull(value, "field")
+    .isPositive(number, "count")
+    .validate();  // Throws with all collected errors
+```
+
+### IDE-Friendly Method Names
+
+All validation methods have clear, self-documenting names with excellent IDE support. As you type `ValidCheck.check().notNull(...).`, your IDE will suggest only the methods that make sense for the next validation:
+
+```java
+// Null checks
+.notNull(value, "field")
+.notNullOrEmpty(text, "text")  
+.notBlank(text, "text")
+
+// Range validation  
+.inRange(number, min, max, "field")
+.isPositive(number, "field")
+.isNegative(number, "field")
+
+// String validation
+.hasLength(text, min, max, "field")
+.matches(text, pattern, "field")
+
+// Collection validation
+.hasSize(collection, min, max, "field")
+.notNullOrEmpty(collection, "field")
+
+// Assertions
+.assertTrue(condition, "message")
+.assertFalse(condition, "message")
+```
+
+The IDE autocomplete guides you to the right validation methods, making the API discoverable and reducing the need to memorize method names.
+
+### Fluent Chaining
+
+Chain validations naturally:
+
+```java
+ValidCheck.require()
+    .notNull(user, "user")
+    .notNull(user.getName(), "name")
+    .hasLength(user.getName(), 1, 50, "name")
+    .matches(user.getEmail(), EMAIL_PATTERN, "email")
+    .isPositive(user.getAge(), "age");
+```
+
+## Advanced Features
+
+### Conditional Validation
+
+Apply validations only when conditions are met:
+
+```java
+ValidCheck.check()
+    .notNull(user, "user") 
+    .when(user != null && user.isAdmin(), 
+          v -> v.hasLength(user.getUsername(), 10, 30, "admin username"))
+    .validate();
+```
+
+### Message Suppliers (Lazy Evaluation)
+
+Expensive message computation only when validation fails:
+
+```java
+ValidCheck.require()
+    .assertTrue(isValid(data), () -> "Validation failed for complex data: " + data.toString());
+```
+
+### Custom Error Messages
+
+Override default messages:
+
+```java
+ValidCheck.require()
+    .notNull(value, "field", "Custom field cannot be null")
+    .hasLength(text, 5, 20, "field", "Custom field must be 5-20 characters");
+```
+
+### Include Other Validators
+
+Combine multiple validation contexts:
+
+```java
+BatchValidator userValidator = ValidCheck.check()
+    .notNull(username, "username");
+
+BatchValidator emailValidator = ValidCheck.check() 
+    .matches(email, EMAIL_PATTERN, "email");
+
+ValidCheck.check()
+    .include(userValidator)
+    .include(emailValidator)
+    .validate();
+```
+
+## Parameter-less Methods
+
+All validation methods support parameter-less versions for cleaner code:
+
+```java
+ValidCheck.require()
+    .notNull(value)           // Uses "parameter" as field name
+    .isPositive(number)       // "parameter must be positive"
+    .hasLength(text, 5, 20);  // "parameter must have length between 5 and 20"
 ```
 
 ## Error Handling
@@ -134,306 +206,48 @@ public record ProductOrder(String productId, Integer quantity, BigDecimal price,
 ### Single Error (Fail-Fast)
 
 ```java
-import static io.github.validcheck.Check.check;
-
-import io.github.validcheck.ValidationException;
-import java.util.List;
-
-public class ErrorHandlingExample {
-
-  public static void main(String[] args) {
-    try {
-      check(-5, "age").isPositive();
-    } catch (ValidationException e) {
-      System.out.println(e.getMessage()); // "'age' must be positive, but it was -5"
-      List<String> errors = e.errors();   // Single error in list
-    }
-  }
+try {
+    ValidCheck.require().isPositive(-5, "age");
+} catch (ValidationException e) {
+    System.out.println(e.getMessage()); 
+    // "'age' must be positive, but it was -5"
+    
+    List<String> errors = e.getErrors(); // ["'age' must be positive, but it was -5"]
 }
 ```
 
 ### Multiple Errors (Batch)
 
 ```java
-import static io.github.validcheck.Check.batch;
-
-import io.github.validcheck.ValidationException;
-import java.util.List;
-
-public class BatchErrorExample {
-
-  public static void main(String[] args) {
-    var validation = batch();
-    validation.check("name", "").notEmpty();
-    validation.check(-1, "age").isPositive();
-
-    try {
-      validation.validate();
-    } catch (ValidationException e) {
-      System.out.println(e.getMessage());
-      // Output:
-      // Validation failed with 2 error(s):
-      // - 'name' must not be empty
-      // - 'age' must be positive, but it was -1
-
-      List<String> allErrors = e.errors(); // ["'name' must not be empty", "'age' must be positive, but it was -1"]
-    }
-  }
+try {
+    ValidCheck.check()
+        .notNull(null, "username")
+        .isPositive(-1, "age")
+        .validate();
+} catch (ValidationException e) {
+    System.out.println(e.getMessage());
+    // "'username' must not be null; 'age' must be positive, but it was -1"
+    
+    List<String> errors = e.getErrors();
+    // ["'username' must not be null", "'age' must be positive, but it was -1"]
 }
 ```
 
-## API Reference
+## Extensibility
 
-### Entry Points
+The library is designed to be easily extensible. You can extend the `Validator` and `BatchValidator` classes to add domain-specific validation methods. See the Javadoc in the source code for detailed examples of creating custom validators.
 
-- `Check.check(T value, String name)` - Create validator for named parameter
-- `Check.check(T value)` - Create validator for unnamed parameter
-- `Check.batch()` - Create batch validation context
-- `Check.isTrue(boolean condition, String message)` - Assert condition
-- `Check.isFalse(boolean condition, String message)` - Assert negated condition
+## Examples
 
-## More Examples
+Complete examples available in the [examples module](validcheck-examples/):
 
-### Method Parameter Validation
-
-```java
-import static io.github.validcheck.Check.check;
-
-public class UserService {
-
-  public void updateProfile(String userId, String email, Integer age) {
-    check(userId, "userId").notNullOrEmpty().lengthBetween(3, 50);
-    check(email, "email").notNullOrEmpty().isEmail();
-    check(age, "age").when(age != null, validator -> validator.isNonNegative().max(120));
-
-    // Business logic here
-    System.out.println("Profile updated for user: " + userId);
-  }
-
-  // Usage example
-  public static void main(String[] args) {
-    var service = new UserService();
-    service.updateProfile("user123", "john@example.com", 25);
-    // service.updateProfile("", "invalid", -5); // ✗ Throws ValidationException
-  }
-}
-```
-
-### Traditional Class Constructor
-
-```java
-import static io.github.validcheck.Check.check;
-
-import java.math.BigDecimal;
-
-public class BankAccount {
-
-  private final String accountNumber;
-  private final BigDecimal initialBalance;
-
-  public BankAccount(String accountNumber, BigDecimal initialBalance) {
-    check(accountNumber, "accountNumber")
-        .notNull()
-        .satisfies(a -> a.matches("\\d{8,12}"), "must be 8-12 digits");
-
-    check(initialBalance, "initialBalance")
-        .notNull()
-        .satisfies(b -> b.compareTo(BigDecimal.ZERO) >= 0, "cannot be negative");
-
-    this.accountNumber = accountNumber;
-    this.initialBalance = initialBalance;
-  }
-
-  public String getAccountNumber() {
-    return accountNumber;
-  }
-
-  public BigDecimal getBalance() {
-    return initialBalance;
-  }
-
-  // Usage example
-  public static void main(String[] args) {
-    var account = new BankAccount("123456789", new BigDecimal("1000.00"));
-    System.out.println("Account created: " + account.getAccountNumber());
-    // var invalid = new BankAccount("abc", new BigDecimal("-100")); // ✗ Throws ValidationException
-  }
-}
-```
-
-### Custom Validation Logic
-
-```java
-import static io.github.validcheck.Check.check;
-
-import java.math.BigDecimal;
-import java.util.List;
-
-// Example domain classes
-class Customer {
-  // Customer implementation
-}
-
-class OrderItem {
-
-  public int getQuantity() {
-    return 1;
-  }
-}
-
-class Order {
-
-  public List<OrderItem> getItems() {
-    return List.of();
-  }
-
-  public Customer getCustomer() {
-    return null;
-  }
-
-  public BigDecimal getTotal() {
-    return BigDecimal.ZERO;
-  }
-}
-
-public class OrderProcessor {
-
-  void processOrder(Order order) {
-    check(order, "order")
-        .notNull()
-        .satisfies(o -> !o.getItems().isEmpty(), "must have at least one item")
-        .satisfies(o -> o.getCustomer() != null, "must have a customer")
-        .satisfies(o -> o.getTotal().compareTo(BigDecimal.ZERO) > 0, "total must be positive");
-
-    // Additional business rules
-    check(order.getItems(), "order items")
-        .satisfies(
-            items -> items.stream().allMatch(item -> item.getQuantity() > 0),
-            "all items must have positive quantity");
-
-    System.out.println("Order processed successfully");
-  }
-
-  // Usage example
-  public static void main(String[] args) {
-    var processor = new OrderProcessor();
-    var customer = new Customer();
-    var item = new OrderItem();
-    var order =
-        new Order() {
-          public List<OrderItem> getItems() {
-            return List.of(item);
-          }
-
-          public Customer getCustomer() {
-            return customer;
-          }
-
-          public BigDecimal getTotal() {
-            return new BigDecimal("100.00");
-          }
-        };
-    processor.processOrder(order);
-    // processor.processOrder(null); // ✗ Throws ValidationException
-  }
-}
-```
-
-## Real-World Example: Service Configuration
-
-See a comprehensive example of validating complex nested configurations:
-
-```java
-// Demonstrates 3-level nested validation with batch validation,
-// custom messages, and oneOf validation
-public record ApplicationConfig(
-        String name,
-        String version,
-        String environment,
-        DatabaseConfig database,
-        ServerConfig server,
-        LoggingConfig logging) {
-
-  public ApplicationConfig {
-    check(name, "name").notNullOrEmpty().matches("[a-z-]+");
-    check(version, "version").notNull().matches("\\d+\\.\\d+\\.\\d+");
-    check(environment, "environment").oneOf("development", "staging", "production");
-    check(database, "database").notNull();
-    check(server, "server").notNull();
-    check(logging, "logging").notNull();
-  }
-}
-```
-
-**Full example:**
-[ServiceConfiguration.java](validcheck-examples/src/main/java/io/github/validcheck/example/config/ServiceConfiguration.java)
-
-## Performance
-
-ValidCheck delivers good performance comparing to traditional Bean Validation frameworks.
-
-See detailed [Performance Benchmark Report](validcheck-examples/BENCHMARK_REPORT.md) comparing
-ValidCheck vs Jakarta Bean Validation.
-
-## Configuration
-
-Control validation behavior with `ValidationConfig`:
-
-```java
-import static io.github.validcheck.Check.withConfig;
-
-import io.github.validcheck.ValidationConfig;
-
-public class ConfigurationExample {
-
-  public static void main(String[] args) {
-    // Custom configuration
-    var config =
-        new ValidationConfig(
-            false, // fillStackTrace - faster exceptions without stack traces
-            false, // includeActualValue - hide sensitive values in error messages
-            512 // actualValueMaxLength - limit the string length of value in the error message
-        );
-
-    // Use configured validation
-    var fastCheck = withConfig(config);
-    String password = "secret123";
-    fastCheck.check(password, "password").notNullOrEmpty();
-
-    // Or create batch with custom config
-    var validation = withConfig(config).batch();
-    String secret = "topsecret";
-    validation.check(secret, "secret").notNull();
-    validation.validate();
-
-    System.out.println("Configuration example completed successfully");
-  }
-}
-```
-
-### Configuration Options
-
-- **fillStackTrace** (default: true) - Include stack trace in ValidationException
-- **includeActualValue** (default: true) - Show actual values in error messages
-- **actualValueMaxLength** (default: 128) - Max string length of value in the error message
-
-**Performance tip:** Set `fillStackTrace = false` for better performance in high-throughput
-scenarios.
-
-**Security tip:** Set `includeActualValue = false` when validating sensitive data like passwords or
-tokens, or taking input values untrusted sources
+- [User Registration](validcheck-examples/src/main/java/io/github/validcheck/example/UserRegistrationExample.java) - Record validation with batch processing
 
 ## Requirements
 
-- Java 11 or higher
-- Zero external dependencies
-
-## AI Disclosure
-
-This project was developed with AI assistance. See [AI.md](AI.md) for transparent disclosure of AI
-usage in development and documentation.
+- Java 11+
+- Zero dependencies
 
 ## License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
-

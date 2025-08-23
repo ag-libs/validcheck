@@ -215,6 +215,6 @@
   </profiles>
 
   <modules>
-    <module>validcheck-core</module>
+    <module>validcheck</module>
   </modules>
 </project>
