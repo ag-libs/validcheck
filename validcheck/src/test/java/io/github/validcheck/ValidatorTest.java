@@ -2,6 +2,7 @@ package io.github.validcheck;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -546,5 +547,488 @@ class ValidatorTest {
             () -> ValidCheck.require().matches(invalidPattern, Pattern.compile("^[a-z]+$")))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must match pattern");
+  }
+
+  @Test
+  void nullOrConditionalValidationMethods() {
+    // Test nullOrInRange - null values should pass
+    ValidCheck.require().nullOrInRange(null, 1, 10, "age");
+    ValidCheck.require().nullOrInRange((Integer) null, 1, 10);
+
+    // Test nullOrInRange - valid values should pass
+    ValidCheck.require().nullOrInRange(5, 1, 10, "age");
+    ValidCheck.require().nullOrInRange(1.5, 1.0, 10.0, "score");
+
+    // Test nullOrInRange - invalid values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(15, 1, 10, "age"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'age' must be null or between 1 and 10");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(-5, 1, 10))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or between 1 and 10");
+
+    // Test nullOrNotEmpty (String) - null values should pass
+    ValidCheck.require().nullOrNotEmpty((String) null, "description");
+    ValidCheck.require().nullOrNotEmpty((String) null);
+
+    // Test nullOrNotEmpty (String) - non-empty values should pass
+    ValidCheck.require().nullOrNotEmpty("hello", "description");
+    ValidCheck.require().nullOrNotEmpty("world");
+
+    // Test nullOrNotEmpty (String) - empty values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty("", "description"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'description' must be null or not empty");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty(""))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or not empty");
+
+    // Test nullOrNotEmpty (Collection) - null values should pass
+    ValidCheck.require().nullOrNotEmpty((Collection<String>) null, "tags");
+    ValidCheck.require().nullOrNotEmpty((Collection<String>) null);
+
+    // Test nullOrNotEmpty (Collection) - non-empty values should pass
+    ValidCheck.require().nullOrNotEmpty(List.of("tag1"), "tags");
+    ValidCheck.require().nullOrNotEmpty(List.of("item"));
+
+    // Test nullOrNotEmpty (Collection) - empty values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty(List.of(), "tags"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'tags' must be null or not empty");
+
+    // Test nullOrNotEmpty (Map) - null values should pass
+    ValidCheck.require().nullOrNotEmpty((Map<String, String>) null, "config");
+    ValidCheck.require().nullOrNotEmpty((Map<String, String>) null);
+
+    // Test nullOrNotEmpty (Map) - non-empty values should pass
+    ValidCheck.require().nullOrNotEmpty(Map.of("key", "value"), "config");
+    ValidCheck.require().nullOrNotEmpty(Map.of("a", "b"));
+
+    // Test nullOrNotEmpty (Map) - empty values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty(Map.of(), "config"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'config' must be null or not empty");
+
+    // Test nullOrNotBlank - null values should pass
+    ValidCheck.require().nullOrNotBlank(null, "bio");
+    ValidCheck.require().nullOrNotBlank(null);
+
+    // Test nullOrNotBlank - non-blank values should pass
+    ValidCheck.require().nullOrNotBlank("hello", "bio");
+    ValidCheck.require().nullOrNotBlank("world");
+
+    // Test nullOrNotBlank - blank values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrNotBlank("   ", "bio"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'bio' must be null or not blank");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrNotBlank(""))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or not blank");
+
+    // Test nullOrHasLength - null values should pass
+    ValidCheck.require().nullOrHasLength(null, 5, 20, "username");
+    ValidCheck.require().nullOrHasLength(null, 1, 10);
+
+    // Test nullOrHasLength - valid lengths should pass
+    ValidCheck.require().nullOrHasLength("hello", 3, 10, "username");
+    ValidCheck.require().nullOrHasLength("world", 1, 20);
+
+    // Test nullOrHasLength - invalid lengths should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasLength("hi", 5, 20, "username"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'username' must be null or have length between 5 and 20");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasLength("verylongstring", 1, 10))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or have length between 1 and 10");
+
+    // Test nullOrHasSize - null values should pass
+    ValidCheck.require().nullOrHasSize(null, 2, 5, "items");
+    ValidCheck.require().nullOrHasSize(null, 1, 3);
+
+    // Test nullOrHasSize - valid sizes should pass
+    ValidCheck.require().nullOrHasSize(List.of("a", "b", "c"), 2, 5, "items");
+    ValidCheck.require().nullOrHasSize(List.of("x"), 1, 3);
+
+    // Test nullOrHasSize - invalid sizes should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of("a"), 2, 5, "items"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'items' must be null or have size between 2 and 5");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of("a", "b", "c", "d"), 1, 3))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or have size between 1 and 3");
+
+    // Test nullOrIsPositive - null values should pass
+    ValidCheck.require().nullOrIsPositive(null, "amount");
+    ValidCheck.require().nullOrIsPositive(null);
+
+    // Test nullOrIsPositive - positive values should pass
+    ValidCheck.require().nullOrIsPositive(5, "amount");
+    ValidCheck.require().nullOrIsPositive(3.14);
+
+    // Test nullOrIsPositive - non-positive values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsPositive(0, "amount"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'amount' must be null or positive");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsPositive(-5))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or positive");
+
+    // Test nullOrIsNegative - null values should pass
+    ValidCheck.require().nullOrIsNegative(null, "deficit");
+    ValidCheck.require().nullOrIsNegative(null);
+
+    // Test nullOrIsNegative - negative values should pass
+    ValidCheck.require().nullOrIsNegative(-5, "deficit");
+    ValidCheck.require().nullOrIsNegative(-3.14);
+
+    // Test nullOrIsNegative - non-negative values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNegative(0, "deficit"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'deficit' must be null or negative");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNegative(5))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or negative");
+
+    // Test nullOrMatches (String regex) - null values should pass
+    ValidCheck.require().nullOrMatches(null, "^[a-z]+$", "code");
+    ValidCheck.require().nullOrMatches(null, "^\\d+$");
+
+    // Test nullOrMatches (String regex) - matching values should pass
+    ValidCheck.require().nullOrMatches("hello", "^[a-z]+$", "code");
+    ValidCheck.require().nullOrMatches("123", "^\\d+$");
+
+    // Test nullOrMatches (String regex) - non-matching values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("Hello", "^[a-z]+$", "code"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'code' must be null or match pattern '^[a-z]+$'");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("abc", "^\\d+$"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or match pattern '^\\d+$'");
+
+    // Test nullOrMatches (Pattern regex) - null values should pass
+    Pattern pattern = Pattern.compile("^[A-Z]+$");
+    ValidCheck.require().nullOrMatches(null, pattern, "name");
+    ValidCheck.require().nullOrMatches(null, pattern);
+
+    // Test nullOrMatches (Pattern regex) - matching values should pass
+    ValidCheck.require().nullOrMatches("HELLO", pattern, "name");
+    ValidCheck.require().nullOrMatches("WORLD", pattern);
+
+    // Test nullOrMatches (Pattern regex) - non-matching values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("hello", pattern, "name"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'name' must be null or match pattern '^[A-Z]+$'");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("world", pattern))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or match pattern '^[A-Z]+$'");
+  }
+
+  @Test
+  void nullOrConditionalValidationMethodsWithInvalidArguments() {
+    // Test nullOrInRange with null min/max
+    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(5, null, 10, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("min and max cannot be null");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(5, 1, null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("min and max cannot be null");
+
+    // Test nullOrHasLength with invalid range
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasLength("test", 10, 5, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("minLength cannot be greater than maxLength");
+
+    // Test nullOrHasSize with invalid range
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of(), 5, 2, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("minSize cannot be greater than maxSize");
+
+    // Test nullOrMatches with null regex
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("test", (String) null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("regex pattern cannot be null");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("test", (Pattern) null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("regex pattern cannot be null");
+  }
+
+  @Test
+  void isNonNegativeAndIsNonPositiveMethods() {
+    // Test isNonNegative - zero should pass (>= 0)
+    ValidCheck.require().isNonNegative(0, "value");
+    ValidCheck.require().isNonNegative(0.0);
+    ValidCheck.require().isNonNegative(5);
+    ValidCheck.require().isNonNegative(3.14);
+
+    // Test isNonNegative - negative values should fail
+    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-1, "value"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'value' must be non-negative");
+
+    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-0.1))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be non-negative");
+
+    // Test isNonNegative - null values should fail
+    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(null, "value"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'value' must be non-negative");
+
+    // Test isNonPositive - zero should pass (<= 0)
+    ValidCheck.require().isNonPositive(0, "value");
+    ValidCheck.require().isNonPositive(-0.0);
+    ValidCheck.require().isNonPositive(-5);
+    ValidCheck.require().isNonPositive(-3.14);
+
+    // Test isNonPositive - positive values should fail
+    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(1, "value"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'value' must be non-positive");
+
+    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(0.1))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be non-positive");
+
+    // Test isNonPositive - null values should fail
+    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(null, "value"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'value' must be non-positive");
+  }
+
+  @Test
+  void nullOrIsNonNegativeAndNullOrIsNonPositiveMethods() {
+    // Test nullOrIsNonNegative - null values should pass
+    ValidCheck.require().nullOrIsNonNegative(null, "amount");
+    ValidCheck.require().nullOrIsNonNegative(null);
+
+    // Test nullOrIsNonNegative - non-negative values should pass (>= 0)
+    ValidCheck.require().nullOrIsNonNegative(0, "amount");
+    ValidCheck.require().nullOrIsNonNegative(5);
+    ValidCheck.require().nullOrIsNonNegative(3.14);
+
+    // Test nullOrIsNonNegative - negative values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonNegative(-1, "amount"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'amount' must be null or non-negative");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonNegative(-0.1))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or non-negative");
+
+    // Test nullOrIsNonPositive - null values should pass
+    ValidCheck.require().nullOrIsNonPositive(null, "deficit");
+    ValidCheck.require().nullOrIsNonPositive(null);
+
+    // Test nullOrIsNonPositive - non-positive values should pass (<= 0)
+    ValidCheck.require().nullOrIsNonPositive(0, "deficit");
+    ValidCheck.require().nullOrIsNonPositive(-5);
+    ValidCheck.require().nullOrIsNonPositive(-3.14);
+
+    // Test nullOrIsNonPositive - positive values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonPositive(1, "deficit"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'deficit' must be null or non-positive");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonPositive(0.1))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or non-positive");
+  }
+
+  @Test
+  void signValidationSemanticDifferences() {
+    // Demonstrate the semantic differences between the sign validation methods
+
+    // Value: -1
+    assertThatThrownBy(() -> ValidCheck.require().isPositive(-1)) // > 0, fails
+        .isInstanceOf(ValidationException.class);
+    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-1)) // >= 0, fails
+        .isInstanceOf(ValidationException.class);
+    ValidCheck.require().isNegative(-1); // < 0, passes
+    ValidCheck.require().isNonPositive(-1); // <= 0, passes
+
+    // Value: 0
+    assertThatThrownBy(() -> ValidCheck.require().isPositive(0)) // > 0, fails
+        .isInstanceOf(ValidationException.class);
+    ValidCheck.require().isNonNegative(0); // >= 0, passes
+    assertThatThrownBy(() -> ValidCheck.require().isNegative(0)) // < 0, fails
+        .isInstanceOf(ValidationException.class);
+    ValidCheck.require().isNonPositive(0); // <= 0, passes
+
+    // Value: 1
+    ValidCheck.require().isPositive(1); // > 0, passes
+    ValidCheck.require().isNonNegative(1); // >= 0, passes
+    assertThatThrownBy(() -> ValidCheck.require().isNegative(1)) // < 0, fails
+        .isInstanceOf(ValidationException.class);
+    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(1)) // <= 0, fails
+        .isInstanceOf(ValidationException.class);
+  }
+
+  @Test
+  void minAndMaxMethods() {
+    // Test min() - valid values should pass (>= minValue)
+    ValidCheck.require().min(18, 18, "age");
+    ValidCheck.require().min(25, 18);
+    ValidCheck.require().min(100.5, 50.0, "score");
+
+    // Test min() - invalid values should fail
+    assertThatThrownBy(() -> ValidCheck.require().min(17, 18, "age"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'age' must be at least 18");
+
+    assertThatThrownBy(() -> ValidCheck.require().min(10, 18))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be at least 18");
+
+    // Test min() - null values should fail
+    assertThatThrownBy(() -> ValidCheck.require().min(null, 18, "age"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'age' must be at least 18");
+
+    // Test max() - valid values should pass (<= maxValue)
+    ValidCheck.require().max(100, 100, "percentage");
+    ValidCheck.require().max(75, 100);
+    ValidCheck.require().max(4.5, 10.0, "rating");
+
+    // Test max() - invalid values should fail
+    assertThatThrownBy(() -> ValidCheck.require().max(101, 100, "percentage"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'percentage' must be at most 100");
+
+    assertThatThrownBy(() -> ValidCheck.require().max(150, 100))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be at most 100");
+
+    // Test max() - null values should fail
+    assertThatThrownBy(() -> ValidCheck.require().max(null, 100, "percentage"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'percentage' must be at most 100");
+  }
+
+  @Test
+  void nullOrMinAndNullOrMaxMethods() {
+    // Test nullOrMin() - null values should pass
+    ValidCheck.require().nullOrMin(null, 18, "age");
+    ValidCheck.require().nullOrMin(null, 0);
+
+    // Test nullOrMin() - valid values should pass (>= minValue)
+    ValidCheck.require().nullOrMin(18, 18, "age");
+    ValidCheck.require().nullOrMin(25, 18);
+    ValidCheck.require().nullOrMin(100.5, 50.0, "score");
+
+    // Test nullOrMin() - invalid values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMin(17, 18, "age"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'age' must be null or at least 18");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMin(10, 18))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or at least 18");
+
+    // Test nullOrMax() - null values should pass
+    ValidCheck.require().nullOrMax(null, 100, "percentage");
+    ValidCheck.require().nullOrMax(null, 10);
+
+    // Test nullOrMax() - valid values should pass (<= maxValue)
+    ValidCheck.require().nullOrMax(100, 100, "percentage");
+    ValidCheck.require().nullOrMax(75, 100);
+    ValidCheck.require().nullOrMax(4.5, 10.0, "rating");
+
+    // Test nullOrMax() - invalid values should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(101, 100, "percentage"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'percentage' must be null or at most 100");
+
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(150, 100))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or at most 100");
+  }
+
+  @Test
+  void minMaxMethodsWithInvalidArguments() {
+    // Test min() with null minValue
+    assertThatThrownBy(() -> ValidCheck.require().min(5, null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("minValue cannot be null");
+
+    // Test max() with null maxValue
+    assertThatThrownBy(() -> ValidCheck.require().max(5, null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("maxValue cannot be null");
+
+    // Test nullOrMin() with null minValue
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMin(5, null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("minValue cannot be null");
+
+    // Test nullOrMax() with null maxValue
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(5, null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("maxValue cannot be null");
+  }
+
+  @Test
+  void singleBoundVsRangeValidationComparison() {
+    // Demonstrate the difference between single-bound and range validation
+
+    // Range validation requires both bounds (awkward for single bounds)
+    ValidCheck.require().inRange(50, 18, 100, "age");
+
+    // Single-bound validation is cleaner and more expressive
+    ValidCheck.require().min(50, 18, "age"); // Only care about minimum
+    ValidCheck.require().max(50, 100, "age"); // Only care about maximum
+
+    // Conditional versions work the same way
+    ValidCheck.require().nullOrInRange(null, 18, 100, "age");
+    ValidCheck.require().nullOrMin(null, 18, "age");
+    ValidCheck.require().nullOrMax(null, 100, "age");
+
+    // Error messages are more specific
+    assertThatThrownBy(() -> ValidCheck.require().min(10, 18, "age"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("must be at least 18"); // Focused message
+
+    assertThatThrownBy(() -> ValidCheck.require().max(150, 100, "percentage"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("must be at most 100"); // Focused message
+  }
+
+  @Test
+  void edgeCaseCoverageForMissedBranches() {
+    // Test formatMessage with includeValue=false (covers missed branch in formatMessage)
+    Validator validatorNoValues = new Validator(false, true, true); // includeValues = false
+    assertThatThrownBy(() -> validatorNoValues.notNull(null, "test"))
+        .hasMessage("'test' must not be null"); // Should not include value
+
+    // Test inRange with null parameters (covers missed branches in inRange)
+    assertThatThrownBy(() -> ValidCheck.require().inRange(5, null, 10, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("min and max cannot be null");
+
+    assertThatThrownBy(() -> ValidCheck.require().inRange(5, 0, null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("min and max cannot be null");
+
+    // Test isNegative with edge cases (covers missed branch in isNegative)
+    assertThatThrownBy(() -> ValidCheck.require().isNegative(null, () -> "custom null message"))
+        .hasMessage("custom null message");
+
+    // Test edge case where value is exactly at boundary for inRange
+    ValidCheck.require().inRange(1, 1, 10, "value"); // Min boundary
+    ValidCheck.require().inRange(10, 1, 10, "value"); // Max boundary
+
+    // Test formatMessage with null name (covers missed branch in formatMessage)
+    assertThatThrownBy(() -> ValidCheck.require().notNull(null, (String) null))
+        .hasMessage("parameter must not be null"); // Should use "parameter" when name is null
   }
 }

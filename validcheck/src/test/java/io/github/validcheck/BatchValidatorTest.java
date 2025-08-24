@@ -200,6 +200,8 @@ class BatchValidatorTest {
   void parameterlessMethodsCoverMissingBatchValidatorOverloads() {
     // Given - Values for testing parameter-less overloads in batch mode
     String nullValue = null;
+    List<String> nullList = null;
+    Integer nullNumber = null;
     Integer outOfRange = 100;
     List<String> emptyList = List.of();
     Map<String, String> emptyMap = Map.of();
@@ -207,6 +209,8 @@ class BatchValidatorTest {
     String longString = "a".repeat(200);
     List<String> smallList = List.of("a");
     Integer negativeNumber = -5;
+    Integer positiveNumber = 5;
+    Integer zero = 0;
     String invalidPattern = "ABC123";
 
     // When - Use BatchValidator parameter-less methods
@@ -223,11 +227,36 @@ class BatchValidatorTest {
             .isPositive(negativeNumber)
             .isNegative(-negativeNumber)
             .matches(invalidPattern, "^[a-z]+$")
-            .matches(invalidPattern, Pattern.compile("^[a-z]+$"));
+            .matches(invalidPattern, Pattern.compile("^[a-z]+$"))
+
+            // Test new conditional (nullOr) methods - all with null values which should pass
+            .nullOrNotEmpty(nullValue)
+            .nullOrNotEmpty(nullList) // Collection version
+            .nullOrNotEmpty((Map<String, String>) null) // Map version
+            .nullOrNotBlank(nullValue)
+            .nullOrHasLength(nullValue, 1, 10)
+            .nullOrHasSize(nullList, 1, 10)
+            .nullOrIsPositive(nullNumber)
+            .nullOrIsNegative(nullNumber)
+            .nullOrMatches(nullValue, "^[a-z]+$")
+            .nullOrMatches(nullValue, Pattern.compile("^[a-z]+$"))
+            .nullOrInRange(nullNumber, 1, 10)
+            .nullOrIsNonNegative(nullNumber)
+            .nullOrIsNonPositive(nullNumber)
+            .nullOrMin(nullNumber, 1)
+            .nullOrMax(nullNumber, 10)
+
+            // Test sign validation methods with failing values
+            .isNonNegative(negativeNumber) // Should fail: -5 is not >= 0
+            .isNonPositive(positiveNumber) // Should fail: 5 is not <= 0
+
+            // Test single-bound methods with failing values
+            .min(negativeNumber, 0) // Should fail: -5 is not >= 0
+            .max(outOfRange, 50); // Should fail: 100 is not <= 50
 
     // Then - Should collect all errors from parameter-less methods
     assertThat(validator.getErrors())
-        .hasSize(12)
+        .hasSize(16)
         .containsOnly(
             "parameter must not be null",
             "parameter must be between 1 and 50, but it was 100",
@@ -240,10 +269,33 @@ class BatchValidatorTest {
             "parameter must be positive, but it was -5",
             "parameter must be negative, but it was 5",
             "parameter must match pattern '^[a-z]+$', but it was 'ABC123'",
-            "parameter must match pattern '^[a-z]+$', but it was 'ABC123'");
+            "parameter must match pattern '^[a-z]+$', but it was 'ABC123'",
+            "parameter must be non-negative, but it was -5",
+            "parameter must be non-positive, but it was 5",
+            "parameter must be at least 0, but it was -5",
+            "parameter must be at most 50, but it was 100");
     assertThat(validator.isValid()).isFalse();
 
     // When & Then - Validate should throw with all collected errors
     assertThatThrownBy(validator::validate).isInstanceOf(ValidationException.class);
+  }
+
+  @Test
+  void nullOrNotEmptyMethodsCoverAllOverloads() {
+    // Given - Test data for different overloads
+    List<String> nullList = null;
+    Map<String, String> nullMap = null;
+
+    // When - Use all nullOrNotEmpty overloads with named parameters
+    BatchValidator validator =
+        ValidCheck.check()
+            .nullOrNotEmpty(nullList, "testList")
+            .nullOrNotEmpty(nullList, () -> "custom list message")
+            .nullOrNotEmpty(nullMap, "testMap")
+            .nullOrNotEmpty(nullMap, () -> "custom map message");
+
+    // Then - All should pass (null values are allowed)
+    assertThat(validator.isValid()).isTrue();
+    assertThat(validator.getErrors()).isEmpty();
   }
 }

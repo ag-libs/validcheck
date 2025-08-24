@@ -30,14 +30,14 @@ Maven:
 <dependency>
   <groupId>io.github.validcheck</groupId>
   <artifactId>validcheck</artifactId>
-  <version>0.9.3</version>
+  <version>0.9.4</version>
 </dependency>
 ```
 
 Gradle:
 
 ```gradle
-implementation 'io.github.validcheck:validcheck:0.9.3'
+implementation 'io.github.validcheck:validcheck:0.9.4'
 ```
 
 ## Quick Start
@@ -109,8 +109,12 @@ All validation methods have clear, self-documenting names with excellent IDE sup
 
 // Range validation  
 .inRange(number, min, max, "field")
-.isPositive(number, "field")
-.isNegative(number, "field")
+.isPositive(number, "field")        // > 0 (excludes zero)
+.isNegative(number, "field")        // < 0 (excludes zero)
+.isNonNegative(number, "field")     // >= 0 (includes zero)
+.isNonPositive(number, "field")     // <= 0 (includes zero)
+.min(number, minValue, "field")     // >= minValue (single bound)
+.max(number, maxValue, "field")     // <= maxValue (single bound)
 
 // String validation
 .hasLength(text, min, max, "field")
@@ -124,6 +128,12 @@ All validation methods have clear, self-documenting names with excellent IDE sup
 .assertTrue(condition, "message")
 .assertFalse(condition, "message")
 ```
+
+ValidCheck provides **comprehensive validation coverage** with over 130+ validation methods including:
+- All standard validation methods with 3 overloads each (named, message supplier, parameter-less)
+- Conditional `nullOr*` variants for optional field validation
+- BatchValidator overrides for fluent method chaining
+- Single-bound `min()`/`max()` methods alongside traditional `inRange()`
 
 The IDE autocomplete guides you to the right validation methods, making the API discoverable and reducing the need to memorize method names.
 
@@ -142,7 +152,7 @@ ValidCheck.require()
 
 ## Advanced Features
 
-### Conditional Validation
+### Conditional Validation with when()
 
 Apply validations only when conditions are met:
 
@@ -153,6 +163,70 @@ ValidCheck.check()
           v -> v.hasLength(user.getUsername(), 10, 30, "admin username"))
     .validate();
 ```
+
+### Conditional Validation for Optional Fields
+
+ValidCheck provides `nullOr*` methods that allow validation of optional parameters - they pass if the value is null OR meets the validation criteria:
+
+```java
+public record UserProfile(
+    String username,    // Required
+    String bio,         // Optional - can be null
+    Integer age,        // Optional - can be null
+    List<String> skills // Optional - can be null
+) {
+    public UserProfile {
+        ValidCheck.check()
+            // Required fields
+            .notNullOrEmpty(username, "username")
+            
+            // Optional fields - null is allowed, but if present must be valid
+            .nullOrNotBlank(bio, "bio")                    // null OR not blank
+            .nullOrHasLength(bio, 10, 500, "bio")          // null OR 10-500 chars
+            .nullOrInRange(age, 13, 120, "age")            // null OR 13-120
+            .nullOrNotEmpty(skills, "skills")              // null OR not empty
+            .nullOrHasSize(skills, 1, 10, "skills")        // null OR 1-10 items
+            .validate();
+    }
+}
+```
+
+Available conditional methods:
+- `nullOrNotEmpty()` - String, Collection, Map variants
+- `nullOrNotBlank()` - String validation
+- `nullOrHasLength()` - String length validation
+- `nullOrHasSize()` - Collection size validation
+- `nullOrInRange()` - Numeric range validation
+- `nullOrIsPositive()` / `nullOrIsNegative()` - Sign validation
+- `nullOrIsNonNegative()` / `nullOrIsNonPositive()` - Sign validation (includes zero)
+- `nullOrMatches()` - Pattern matching
+- `nullOrMin()` / `nullOrMax()` - Single-bound validation
+
+### Single-Bound Validation
+
+For cases where you only need to validate a minimum or maximum value (without artificial bounds):
+
+```java
+// Clean single-bound validation
+ValidCheck.require()
+    .min(age, 18, "age")           // Must be at least 18
+    .max(discount, 50.0, "discount"); // Must be at most 50%
+
+// Compare with awkward range validation requiring artificial bounds
+ValidCheck.require()
+    .inRange(age, 18, Integer.MAX_VALUE, "age")        // Awkward!
+    .inRange(discount, Double.MIN_VALUE, 50.0, "discount"); // Awkward!
+```
+
+Available single-bound methods:
+- `min(value, minValue, name)` - Value must be >= minValue
+- `max(value, maxValue, name)` - Value must be <= maxValue  
+- `nullOrMin(value, minValue, name)` - null OR >= minValue
+- `nullOrMax(value, maxValue, name)` - null OR <= maxValue
+
+Error messages are more focused:
+- `min()`: "must be at least X"
+- `max()`: "must be at most X"
 
 ### Message Suppliers (Lazy Evaluation)
 
@@ -241,7 +315,7 @@ The library is designed to be easily extensible. You can extend the `Validator` 
 
 Complete examples available in the [examples module](validcheck-examples/):
 
-- [User Registration](validcheck-examples/src/main/java/io/github/validcheck/example/UserRegistrationExample.java) - Record validation with batch processing
+- [User Registration](validcheck-examples/src/main/java/io/github/validcheck/example/UserRegistrationExample.java) - Record validation with batch processing, conditional validation for optional fields, and single-bound validation examples
 
 ## Requirements
 

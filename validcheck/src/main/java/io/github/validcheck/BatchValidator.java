@@ -335,4 +335,298 @@ public class BatchValidator extends Validator {
   public BatchValidator matches(String value, Pattern regex) {
     return (BatchValidator) super.matches(value, regex);
   }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrInRange(T value, T min, T max, String name) {
+    return (BatchValidator) super.nullOrInRange(value, min, max, name);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrInRange(
+      T value, T min, T max, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrInRange(value, min, max, messageSupplier);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrInRange(T value, T min, T max) {
+    return (BatchValidator) super.nullOrInRange(value, min, max);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(String value, String name) {
+    return (BatchValidator) super.nullOrNotEmpty(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(String value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrNotEmpty(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(String value) {
+    return (BatchValidator) super.nullOrNotEmpty(value);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(Collection<?> value, String name) {
+    return (BatchValidator) super.nullOrNotEmpty(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(Collection<?> value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrNotEmpty(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(Collection<?> value) {
+    return (BatchValidator) super.nullOrNotEmpty(value);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(Map<?, ?> value, String name) {
+    return (BatchValidator) super.nullOrNotEmpty(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrNotEmpty(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrNotEmpty(Map<?, ?> value) {
+    return (BatchValidator) super.nullOrNotEmpty(value);
+  }
+
+  @Override
+  public BatchValidator nullOrNotBlank(String value, String name) {
+    return (BatchValidator) super.nullOrNotBlank(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrNotBlank(String value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrNotBlank(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrNotBlank(String value) {
+    return (BatchValidator) super.nullOrNotBlank(value);
+  }
+
+  @Override
+  public BatchValidator nullOrHasLength(String value, int minLength, int maxLength, String name) {
+    return (BatchValidator) super.nullOrHasLength(value, minLength, maxLength, name);
+  }
+
+  @Override
+  public BatchValidator nullOrHasLength(
+      String value, int minLength, int maxLength, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrHasLength(value, minLength, maxLength, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrHasLength(String value, int minLength, int maxLength) {
+    return (BatchValidator) super.nullOrHasLength(value, minLength, maxLength);
+  }
+
+  @Override
+  public BatchValidator nullOrHasSize(Collection<?> value, int minSize, int maxSize, String name) {
+    return (BatchValidator) super.nullOrHasSize(value, minSize, maxSize, name);
+  }
+
+  @Override
+  public BatchValidator nullOrHasSize(
+      Collection<?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrHasSize(value, minSize, maxSize, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrHasSize(Collection<?> value, int minSize, int maxSize) {
+    return (BatchValidator) super.nullOrHasSize(value, minSize, maxSize);
+  }
+
+  @Override
+  public BatchValidator nullOrIsPositive(Number value, String name) {
+    return (BatchValidator) super.nullOrIsPositive(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrIsPositive(Number value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrIsPositive(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrIsPositive(Number value) {
+    return (BatchValidator) super.nullOrIsPositive(value);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNegative(Number value, String name) {
+    return (BatchValidator) super.nullOrIsNegative(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNegative(Number value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrIsNegative(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNegative(Number value) {
+    return (BatchValidator) super.nullOrIsNegative(value);
+  }
+
+  @Override
+  public BatchValidator nullOrMatches(String value, String regex, String name) {
+    return (BatchValidator) super.nullOrMatches(value, regex, name);
+  }
+
+  @Override
+  public BatchValidator nullOrMatches(
+      String value, String regex, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrMatches(value, regex, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrMatches(String value, String regex) {
+    return (BatchValidator) super.nullOrMatches(value, regex);
+  }
+
+  @Override
+  public BatchValidator nullOrMatches(String value, Pattern regex, String name) {
+    return (BatchValidator) super.nullOrMatches(value, regex, name);
+  }
+
+  @Override
+  public BatchValidator nullOrMatches(
+      String value, Pattern regex, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrMatches(value, regex, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrMatches(String value, Pattern regex) {
+    return (BatchValidator) super.nullOrMatches(value, regex);
+  }
+
+  @Override
+  public BatchValidator isNonNegative(Number value, String name) {
+    return (BatchValidator) super.isNonNegative(value, name);
+  }
+
+  @Override
+  public BatchValidator isNonNegative(Number value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.isNonNegative(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator isNonNegative(Number value) {
+    return (BatchValidator) super.isNonNegative(value);
+  }
+
+  @Override
+  public BatchValidator isNonPositive(Number value, String name) {
+    return (BatchValidator) super.isNonPositive(value, name);
+  }
+
+  @Override
+  public BatchValidator isNonPositive(Number value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.isNonPositive(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator isNonPositive(Number value) {
+    return (BatchValidator) super.isNonPositive(value);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNonNegative(Number value, String name) {
+    return (BatchValidator) super.nullOrIsNonNegative(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNonNegative(Number value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrIsNonNegative(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNonNegative(Number value) {
+    return (BatchValidator) super.nullOrIsNonNegative(value);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNonPositive(Number value, String name) {
+    return (BatchValidator) super.nullOrIsNonPositive(value, name);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNonPositive(Number value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrIsNonPositive(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrIsNonPositive(Number value) {
+    return (BatchValidator) super.nullOrIsNonPositive(value);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator min(T value, T minValue, String name) {
+    return (BatchValidator) super.min(value, minValue, name);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator min(
+      T value, T minValue, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.min(value, minValue, messageSupplier);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator min(T value, T minValue) {
+    return (BatchValidator) super.min(value, minValue);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator max(T value, T maxValue, String name) {
+    return (BatchValidator) super.max(value, maxValue, name);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator max(
+      T value, T maxValue, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.max(value, maxValue, messageSupplier);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator max(T value, T maxValue) {
+    return (BatchValidator) super.max(value, maxValue);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrMin(T value, T minValue, String name) {
+    return (BatchValidator) super.nullOrMin(value, minValue, name);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrMin(
+      T value, T minValue, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrMin(value, minValue, messageSupplier);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrMin(T value, T minValue) {
+    return (BatchValidator) super.nullOrMin(value, minValue);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrMax(T value, T maxValue, String name) {
+    return (BatchValidator) super.nullOrMax(value, maxValue, name);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrMax(
+      T value, T maxValue, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrMax(value, maxValue, messageSupplier);
+  }
+
+  @Override
+  public <T extends Number> BatchValidator nullOrMax(T value, T maxValue) {
+    return (BatchValidator) super.nullOrMax(value, maxValue);
+  }
 }
