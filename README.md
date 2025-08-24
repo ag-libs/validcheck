@@ -30,14 +30,14 @@ Maven:
 <dependency>
   <groupId>io.github.validcheck</groupId>
   <artifactId>validcheck</artifactId>
-  <version>0.9.4</version>
+  <version>0.9.5</version>
 </dependency>
 ```
 
 Gradle:
 
 ```gradle
-implementation 'io.github.validcheck:validcheck:0.9.4'
+implementation 'io.github.validcheck:validcheck:0.9.5'
 ```
 
 ## Quick Start
