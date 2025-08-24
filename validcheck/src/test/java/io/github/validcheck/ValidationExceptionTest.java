@@ -16,7 +16,7 @@ public class ValidationExceptionTest {
     List<String> errors = List.of("Error 1", "Error 2");
 
     // When - Create ValidationException
-    ValidationException exception = new ValidationException(true, message, errors);
+    ValidationException exception = new ValidationException(message, errors);
 
     // Then - Test getErrors() returns immutable list
     List<String> returnedErrors = exception.getErrors();
@@ -33,15 +33,13 @@ public class ValidationExceptionTest {
     List<String> errors = List.of("Test error");
 
     // When - Create exception with fillStackTrace = true
-    ValidationException withStackTrace = new ValidationException(true, "Message", errors);
-    withStackTrace.fillInStackTrace();
+    ValidationException withStackTrace = ValidationException.create(true, "Message", errors);
 
     // Then - Should have stack trace elements
     assertThat(withStackTrace.getStackTrace()).isNotEmpty();
 
     // When - Create exception with fillStackTrace = false
-    ValidationException withoutStackTrace = new ValidationException(false, "Message", errors);
-    withoutStackTrace.fillInStackTrace();
+    ValidationException withoutStackTrace = ValidationException.create(false, "Message", errors);
 
     // Then - Should have empty stack trace
     assertThat(withoutStackTrace.getStackTrace()).isEmpty();

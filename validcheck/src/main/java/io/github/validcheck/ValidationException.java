@@ -28,8 +28,6 @@ import java.util.List;
  * @see BatchValidator
  */
 public class ValidationException extends RuntimeException {
-  /** Whether to fill stack traces for performance optimization. */
-  private final boolean fillStackTrace;
 
   /** Immutable list of all validation error messages. */
   private final List<String> errors;
@@ -37,26 +35,30 @@ public class ValidationException extends RuntimeException {
   /**
    * Constructs a new ValidationException with the specified configuration.
    *
-   * @param fillStackTrace whether to fill stack traces for performance optimization
    * @param message the detail message combining all validation errors
    * @param errors the list of individual validation error messages
    */
-  public ValidationException(boolean fillStackTrace, String message, List<String> errors) {
+  protected ValidationException(String message, List<String> errors) {
     super(message);
-    this.fillStackTrace = fillStackTrace;
     this.errors = Collections.unmodifiableList(errors);
   }
 
   /**
-   * {@inheritDoc}
+   * Creates a new ValidationException with the specified configuration.
    *
-   * <p>Conditionally fills the stack trace based on the fillStackTrace configuration. When
-   * disabled, this provides better performance for validation scenarios where stack traces are not
-   * needed.
+   * @param fillStackTrace whether to fill stack traces for performance optimization
+   * @param message the detail message combining all validation errors
+   * @param errors the list of individual validation error messages
    */
-  @Override
-  public synchronized Throwable fillInStackTrace() {
-    return fillStackTrace ? super.fillInStackTrace() : this;
+  static ValidationException create(boolean fillStackTrace, String message, List<String> errors) {
+    return fillStackTrace
+        ? new ValidationException(message, errors)
+        : new ValidationException(message, errors) {
+          @Override
+          public synchronized Throwable fillInStackTrace() {
+            return this;
+          }
+        };
   }
 
   /**

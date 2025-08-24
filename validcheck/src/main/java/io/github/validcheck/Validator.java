@@ -126,7 +126,7 @@ public class Validator {
   protected void validate() {
     if (!errors.isEmpty()) {
       final var errorMessage = String.join("; ", errors);
-      throw new ValidationException(fillStackTrace, errorMessage, errors);
+      throw ValidationException.create(fillStackTrace, errorMessage, errors);
     }
   }
 
