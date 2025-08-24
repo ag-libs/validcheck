@@ -667,6 +667,68 @@ public class Validator {
   }
 
   /**
+   * Validates that the specified map has a size within the given range (inclusive).
+   *
+   * @param value the map to check
+   * @param minSize the minimum allowed size (inclusive)
+   * @param maxSize the maximum allowed size (inclusive)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is null or size is outside the range and
+   *     fail-fast is enabled
+   * @throws IllegalArgumentException if minSize is greater than maxSize
+   */
+  public Validator hasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
+    return hasSize(
+        value,
+        minSize,
+        maxSize,
+        () ->
+            formatMessage(
+                value,
+                name,
+                String.format("must have size between %d and %d", minSize, maxSize),
+                true));
+  }
+
+  /**
+   * Validates that the specified map has a size within the given range (inclusive).
+   *
+   * @param value the map to check
+   * @param minSize the minimum allowed size (inclusive)
+   * @param maxSize the maximum allowed size (inclusive)
+   * @param messageSupplier supplier for the error message if the size is outside the range
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is null or size is outside the range and
+   *     fail-fast is enabled
+   * @throws IllegalArgumentException if minSize is greater than maxSize
+   */
+  public Validator hasSize(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalse(
+        value == null || value.size() < minSize || value.size() > maxSize, messageSupplier);
+  }
+
+  /**
+   * Validates that the specified map has a size within the given range (inclusive).
+   *
+   * @param value the map to check
+   * @param minSize the minimum allowed size (inclusive)
+   * @param maxSize the maximum allowed size (inclusive)
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is null or size is outside the range and
+   *     fail-fast is enabled
+   * @throws IllegalArgumentException if minSize is greater than maxSize
+   */
+  public Validator hasSize(Map<?, ?> value, int minSize, int maxSize) {
+    return hasSize(value, minSize, maxSize, (String) null);
+  }
+
+  /**
    * Validates that the specified numeric value is positive (greater than zero).
    *
    * @param value the numeric value to check
@@ -1279,6 +1341,71 @@ public class Validator {
   }
 
   /**
+   * Validates that the specified map is null or has a size within the given range (inclusive). This
+   * method passes validation if the value is null OR if its size is within the specified range.
+   *
+   * @param value the map to check (can be null)
+   * @param minSize the minimum allowed size (inclusive)
+   * @param maxSize the maximum allowed size (inclusive)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is not null and size is outside the range and
+   *     fail-fast is enabled
+   * @throws IllegalArgumentException if minSize is greater than maxSize
+   */
+  public Validator nullOrHasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
+    return nullOrHasSize(
+        value,
+        minSize,
+        maxSize,
+        () ->
+            formatMessage(
+                value,
+                name,
+                String.format("must be null or have size between %d and %d", minSize, maxSize),
+                true));
+  }
+
+  /**
+   * Validates that the specified map is null or has a size within the given range (inclusive). This
+   * method passes validation if the value is null OR if its size is within the specified range.
+   *
+   * @param value the map to check (can be null)
+   * @param minSize the minimum allowed size (inclusive)
+   * @param maxSize the maximum allowed size (inclusive)
+   * @param messageSupplier supplier for the error message if the size is outside the range
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is not null and size is outside the range and
+   *     fail-fast is enabled
+   * @throws IllegalArgumentException if minSize is greater than maxSize
+   */
+  public Validator nullOrHasSize(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalse(
+        value != null && (value.size() < minSize || value.size() > maxSize), messageSupplier);
+  }
+
+  /**
+   * Validates that the specified map is null or has a size within the given range (inclusive). This
+   * method passes validation if the value is null OR if its size is within the specified range.
+   *
+   * @param value the map to check (can be null)
+   * @param minSize the minimum allowed size (inclusive)
+   * @param maxSize the maximum allowed size (inclusive)
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is not null and size is outside the range and
+   *     fail-fast is enabled
+   * @throws IllegalArgumentException if minSize is greater than maxSize
+   */
+  public Validator nullOrHasSize(Map<?, ?> value, int minSize, int maxSize) {
+    return nullOrHasSize(value, minSize, maxSize, (String) null);
+  }
+
+  /**
    * Validates that the specified numeric value is null or positive (greater than zero). This method
    * passes validation if the value is null OR if it's positive.
    *
@@ -1475,6 +1602,41 @@ public class Validator {
    */
   public Validator nullOrMatches(String value, Pattern regex) {
     return nullOrMatches(value, regex, (String) null);
+  }
+
+  /**
+   * Validates that the specified value is null.
+   *
+   * @param value the value to check for null
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is not null and fail-fast is enabled
+   */
+  public Validator isNull(Object value, String name) {
+    return isNull(value, () -> formatMessage(value, name, "must be null", true));
+  }
+
+  /**
+   * Validates that the specified value is null.
+   *
+   * @param value the value to check for null
+   * @param messageSupplier supplier for the error message if the value is not null
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is not null and fail-fast is enabled
+   */
+  public Validator isNull(Object value, Supplier<String> messageSupplier) {
+    return assertTrue(value == null, messageSupplier);
+  }
+
+  /**
+   * Validates that the specified value is null.
+   *
+   * @param value the value to check for null
+   * @return this validator instance for method chaining
+   * @throws ValidationException immediately if value is not null and fail-fast is enabled
+   */
+  public Validator isNull(Object value) {
+    return isNull(value, (String) null);
   }
 
   /**

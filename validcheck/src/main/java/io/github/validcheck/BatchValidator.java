@@ -277,6 +277,22 @@ public class BatchValidator extends Validator {
   }
 
   @Override
+  public BatchValidator hasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
+    return (BatchValidator) super.hasSize(value, minSize, maxSize, name);
+  }
+
+  @Override
+  public BatchValidator hasSize(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.hasSize(value, minSize, maxSize, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator hasSize(Map<?, ?> value, int minSize, int maxSize) {
+    return (BatchValidator) super.hasSize(value, minSize, maxSize);
+  }
+
+  @Override
   public BatchValidator isPositive(Number value, String name) {
     return (BatchValidator) super.isPositive(value, name);
   }
@@ -441,6 +457,22 @@ public class BatchValidator extends Validator {
 
   @Override
   public BatchValidator nullOrHasSize(Collection<?> value, int minSize, int maxSize) {
+    return (BatchValidator) super.nullOrHasSize(value, minSize, maxSize);
+  }
+
+  @Override
+  public BatchValidator nullOrHasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
+    return (BatchValidator) super.nullOrHasSize(value, minSize, maxSize, name);
+  }
+
+  @Override
+  public BatchValidator nullOrHasSize(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.nullOrHasSize(value, minSize, maxSize, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator nullOrHasSize(Map<?, ?> value, int minSize, int maxSize) {
     return (BatchValidator) super.nullOrHasSize(value, minSize, maxSize);
   }
 
@@ -628,5 +660,20 @@ public class BatchValidator extends Validator {
   @Override
   public <T extends Number> BatchValidator nullOrMax(T value, T maxValue) {
     return (BatchValidator) super.nullOrMax(value, maxValue);
+  }
+
+  @Override
+  public BatchValidator isNull(Object value, String name) {
+    return (BatchValidator) super.isNull(value, name);
+  }
+
+  @Override
+  public BatchValidator isNull(Object value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.isNull(value, messageSupplier);
+  }
+
+  @Override
+  public BatchValidator isNull(Object value) {
+    return (BatchValidator) super.isNull(value);
   }
 }

@@ -354,6 +354,54 @@ class ValidatorTest {
   }
 
   @Test
+  void mapHasSizeMethodsWithAllOverloads() {
+    // Given - Map size test values
+    Map<String, String> validMap = Map.of("a", "1", "b", "2", "c", "3");
+    Map<String, String> smallMap = Map.of("a", "1");
+    Map<String, String> largeMap =
+        Map.of("a", "1", "b", "2", "c", "3", "d", "4", "e", "5", "f", "6");
+    Map<String, String> nullMap = null;
+    int minSize = 2;
+    int maxSize = 5;
+    String paramName = "config";
+
+    // When & Then - Test hasSize with name (valid)
+    ValidCheck.require().hasSize(validMap, minSize, maxSize, paramName);
+
+    // When & Then - Test hasSize with name (too small)
+    assertThatThrownBy(() -> ValidCheck.require().hasSize(smallMap, minSize, maxSize, paramName))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'config' must have size between 2 and 5");
+
+    // When & Then - Test hasSize with name (too large)
+    assertThatThrownBy(() -> ValidCheck.require().hasSize(largeMap, minSize, maxSize, paramName))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'config' must have size between 2 and 5");
+
+    // When & Then - Test hasSize with name (null)
+    assertThatThrownBy(() -> ValidCheck.require().hasSize(nullMap, minSize, maxSize, paramName))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'config' must have size between 2 and 5");
+
+    // When & Then - Test hasSize with supplier (small)
+    assertThatThrownBy(
+            () ->
+                ValidCheck.require().hasSize(smallMap, minSize, maxSize, () -> "Invalid map size"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Invalid map size");
+
+    // When & Then - Test hasSize without name (large)
+    assertThatThrownBy(() -> ValidCheck.require().hasSize(largeMap, minSize, maxSize))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must have size between 2 and 5");
+
+    // When & Then - Test IllegalArgumentException for invalid range
+    assertThatThrownBy(() -> ValidCheck.require().hasSize(validMap, 10, 5, paramName))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("minSize cannot be greater than maxSize");
+  }
+
+  @Test
   void numericPositiveAndNegativeMethodsWithAllOverloads() {
     // Given - Numeric test values
     Double positiveValue = 42.5;
@@ -646,8 +694,8 @@ class ValidatorTest {
         .hasMessageContaining("parameter must be null or have length between 1 and 10");
 
     // Test nullOrHasSize - null values should pass
-    ValidCheck.require().nullOrHasSize(null, 2, 5, "items");
-    ValidCheck.require().nullOrHasSize(null, 1, 3);
+    ValidCheck.require().nullOrHasSize((Collection<String>) null, 2, 5, "items");
+    ValidCheck.require().nullOrHasSize((Collection<String>) null, 1, 3);
 
     // Test nullOrHasSize - valid sizes should pass
     ValidCheck.require().nullOrHasSize(List.of("a", "b", "c"), 2, 5, "items");
@@ -659,6 +707,26 @@ class ValidatorTest {
         .hasMessageContaining("'items' must be null or have size between 2 and 5");
 
     assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of("a", "b", "c", "d"), 1, 3))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null or have size between 1 and 3");
+
+    // Test nullOrHasSize (Map) - null values should pass
+    ValidCheck.require().nullOrHasSize((Map<String, String>) null, 2, 5, "config");
+    ValidCheck.require().nullOrHasSize((Map<String, String>) null, 1, 3);
+
+    // Test nullOrHasSize (Map) - valid sizes should pass
+    ValidCheck.require().nullOrHasSize(Map.of("a", "1", "b", "2", "c", "3"), 2, 5, "config");
+    ValidCheck.require().nullOrHasSize(Map.of("x", "1"), 1, 3);
+
+    // Test nullOrHasSize (Map) - invalid sizes should fail
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(Map.of("a", "1"), 2, 5, "config"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'config' must be null or have size between 2 and 5");
+
+    assertThatThrownBy(
+            () ->
+                ValidCheck.require()
+                    .nullOrHasSize(Map.of("a", "1", "b", "2", "c", "3", "d", "4"), 1, 3))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or have size between 1 and 3");
 
@@ -750,6 +818,11 @@ class ValidatorTest {
 
     // Test nullOrHasSize with invalid range
     assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of(), 5, 2, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("minSize cannot be greater than maxSize");
+
+    // Test nullOrHasSize (Map) with invalid range
+    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(Map.of(), 5, 2, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minSize cannot be greater than maxSize");
 
@@ -1001,6 +1074,32 @@ class ValidatorTest {
     assertThatThrownBy(() -> ValidCheck.require().max(150, 100, "percentage"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("must be at most 100"); // Focused message
+  }
+
+  @Test
+  void isNullMethodsWithAllOverloads() {
+    // Given - Test objects
+    String nullValue = null;
+    String nonNullValue = "test";
+    String paramName = "testParam";
+
+    // When & Then - Test isNull with name (valid - null value)
+    ValidCheck.require().isNull(nullValue, paramName);
+
+    // When & Then - Test isNull with name (invalid - non-null value)
+    assertThatThrownBy(() -> ValidCheck.require().isNull(nonNullValue, paramName))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'testParam' must be null");
+
+    // When & Then - Test isNull with supplier (invalid - non-null value)
+    assertThatThrownBy(() -> ValidCheck.require().isNull(nonNullValue, () -> "Custom null message"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Custom null message");
+
+    // When & Then - Test isNull without name (invalid - non-null value)
+    assertThatThrownBy(() -> ValidCheck.require().isNull(nonNullValue))
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("parameter must be null");
   }
 
   @Test

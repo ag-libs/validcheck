@@ -224,6 +224,7 @@ class BatchValidatorTest {
             .notBlank(blankString)
             .hasLength(longString, 1, 100)
             .hasSize(smallList, 2, 5)
+            .hasSize(emptyMap, 2, 5)
             .isPositive(negativeNumber)
             .isNegative(-negativeNumber)
             .matches(invalidPattern, "^[a-z]+$")
@@ -236,6 +237,7 @@ class BatchValidatorTest {
             .nullOrNotBlank(nullValue)
             .nullOrHasLength(nullValue, 1, 10)
             .nullOrHasSize(nullList, 1, 10)
+            .nullOrHasSize((Map<String, String>) null, 1, 10)
             .nullOrIsPositive(nullNumber)
             .nullOrIsNegative(nullNumber)
             .nullOrMatches(nullValue, "^[a-z]+$")
@@ -256,7 +258,7 @@ class BatchValidatorTest {
 
     // Then - Should collect all errors from parameter-less methods
     assertThat(validator.getErrors())
-        .hasSize(16)
+        .hasSize(17)
         .containsOnly(
             "parameter must not be null",
             "parameter must be between 1 and 50, but it was 100",
@@ -266,6 +268,7 @@ class BatchValidatorTest {
             "parameter must not be blank",
             "parameter must have length between 1 and 100, but it was 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...'",
             "parameter must have size between 2 and 5, but it was [a]",
+            "parameter must have size between 2 and 5, but it was {}",
             "parameter must be positive, but it was -5",
             "parameter must be negative, but it was 5",
             "parameter must match pattern '^[a-z]+$', but it was 'ABC123'",
