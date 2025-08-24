@@ -202,32 +202,6 @@ Available conditional methods:
 - `nullOrMatches()` - Pattern matching
 - `nullOrMin()` / `nullOrMax()` - Single-bound validation
 
-### Single-Bound Validation
-
-For cases where you only need to validate a minimum or maximum value (without artificial bounds):
-
-```java
-// Clean single-bound validation
-ValidCheck.require()
-    .min(age, 18, "age")           // Must be at least 18
-    .max(discount, 50.0, "discount"); // Must be at most 50%
-
-// Compare with awkward range validation requiring artificial bounds
-ValidCheck.require()
-    .inRange(age, 18, Integer.MAX_VALUE, "age")        // Awkward!
-    .inRange(discount, Double.MIN_VALUE, 50.0, "discount"); // Awkward!
-```
-
-Available single-bound methods:
-- `min(value, minValue, name)` - Value must be >= minValue
-- `max(value, maxValue, name)` - Value must be <= maxValue  
-- `nullOrMin(value, minValue, name)` - null OR >= minValue
-- `nullOrMax(value, maxValue, name)` - null OR <= maxValue
-
-Error messages are more focused:
-- `min()`: "must be at least X"
-- `max()`: "must be at most X"
-
 ### Message Suppliers (Lazy Evaluation)
 
 Expensive message computation only when validation fails:
