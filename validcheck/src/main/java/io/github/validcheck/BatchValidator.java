@@ -185,48 +185,48 @@ public class BatchValidator extends Validator {
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(String value, String name) {
-    return (BatchValidator) super.notNullOrEmpty(value, name);
+  public BatchValidator notEmpty(String value, String name) {
+    return (BatchValidator) super.notEmpty(value, name);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(String value, Supplier<String> messageSupplier) {
-    return (BatchValidator) super.notNullOrEmpty(value, messageSupplier);
+  public BatchValidator notEmpty(String value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.notEmpty(value, messageSupplier);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(String value) {
-    return (BatchValidator) super.notNullOrEmpty(value);
+  public BatchValidator notEmpty(String value) {
+    return (BatchValidator) super.notEmpty(value);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(Collection<?> value, String name) {
-    return (BatchValidator) super.notNullOrEmpty(value, name);
+  public BatchValidator notEmpty(Collection<?> value, String name) {
+    return (BatchValidator) super.notEmpty(value, name);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(Collection<?> value, Supplier<String> messageSupplier) {
-    return (BatchValidator) super.notNullOrEmpty(value, messageSupplier);
+  public BatchValidator notEmpty(Collection<?> value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.notEmpty(value, messageSupplier);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(Collection<?> value) {
-    return (BatchValidator) super.notNullOrEmpty(value);
+  public BatchValidator notEmpty(Collection<?> value) {
+    return (BatchValidator) super.notEmpty(value);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(Map<?, ?> value, String name) {
-    return (BatchValidator) super.notNullOrEmpty(value, name);
+  public BatchValidator notEmpty(Map<?, ?> value, String name) {
+    return (BatchValidator) super.notEmpty(value, name);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
-    return (BatchValidator) super.notNullOrEmpty(value, messageSupplier);
+  public BatchValidator notEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
+    return (BatchValidator) super.notEmpty(value, messageSupplier);
   }
 
   @Override
-  public BatchValidator notNullOrEmpty(Map<?, ?> value) {
-    return (BatchValidator) super.notNullOrEmpty(value);
+  public BatchValidator notEmpty(Map<?, ?> value) {
+    return (BatchValidator) super.notEmpty(value);
   }
 
   @Override

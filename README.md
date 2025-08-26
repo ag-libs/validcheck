@@ -104,7 +104,8 @@ All validation methods have clear, self-documenting names with excellent IDE sup
 ```java
 // Null checks
 .notNull(value, "field")
-.notNullOrEmpty(text, "text")  
+.isNull(value, "field")
+.notEmpty(text, "text")  
 .notBlank(text, "text")
 
 // Range validation  
@@ -122,14 +123,14 @@ All validation methods have clear, self-documenting names with excellent IDE sup
 
 // Collection validation
 .hasSize(collection, min, max, "field")
-.notNullOrEmpty(collection, "field")
+.notEmpty(collection, "field")
 
 // Assertions
 .assertTrue(condition, "message")
 .assertFalse(condition, "message")
 ```
 
-ValidCheck provides **comprehensive validation coverage** with over 130+ validation methods including:
+ValidCheck provides **comprehensive validation coverage** with over 120+ validation methods including:
 - All standard validation methods with 3 overloads each (named, message supplier, parameter-less)
 - Conditional `nullOr*` variants for optional field validation
 - BatchValidator overrides for fluent method chaining
@@ -178,7 +179,7 @@ public record UserProfile(
     public UserProfile {
         ValidCheck.check()
             // Required fields
-            .notNullOrEmpty(username, "username")
+            .notEmpty(username, "username")
             
             // Optional fields - null is allowed, but if present must be valid
             .nullOrNotBlank(bio, "bio")                    // null OR not blank
@@ -213,12 +214,12 @@ ValidCheck.require()
 
 ### Custom Error Messages
 
-Override default messages:
+Override default messages using message suppliers:
 
 ```java
 ValidCheck.require()
-    .notNull(value, "field", "Custom field cannot be null")
-    .hasLength(text, 5, 20, "field", "Custom field must be 5-20 characters");
+    .notNull(value, () -> "Custom field cannot be null")
+    .hasLength(text, 5, 20, () -> "Custom field must be 5-20 characters");
 ```
 
 ### Include Other Validators

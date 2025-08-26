@@ -20,7 +20,7 @@ public class UserRegistrationExample {
     public UserRegistration {
       // Batch validation - collects all errors before throwing
       ValidCheck.check()
-          .notNullOrEmpty(username, "username")
+          .notEmpty(username, "username")
           .hasLength(username, 3, 30, "username")
           .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
           .hasLength(password, 8, 100, "password")
@@ -52,7 +52,7 @@ public class UserRegistrationExample {
       // Validation with conditional methods for optional parameters
       ValidCheck.check()
           // Required fields - must be present and valid
-          .notNullOrEmpty(username, "username")
+          .notEmpty(username, "username")
           .hasLength(username, 3, 30, "username")
           .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
 

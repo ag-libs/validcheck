@@ -22,7 +22,7 @@ class BatchValidatorTest {
     BatchValidator validator =
         ValidCheck.check()
             .notNull(nullName, "name")
-            .notNullOrEmpty(emptyEmail, "email")
+            .notEmpty(emptyEmail, "email")
             .isPositive(negativeAge, "age");
 
     // Then - Test getErrors() method
@@ -64,7 +64,7 @@ class BatchValidatorTest {
     // When - Use include() to combine validators
     BatchValidator combinedValidator =
         ValidCheck.check()
-            .notNullOrEmpty("", "email") // Add one more error
+            .notEmpty("", "email") // Add one more error
             .include(userValidator)
             .include(addressValidator);
 
@@ -166,12 +166,12 @@ class BatchValidatorTest {
             .inRange(validNumber, 1, 10, "number")
 
             // Test string methods return BatchValidator
-            .notNullOrEmpty(validString, "string")
+            .notEmpty(validString, "string")
             .notBlank(validString, "string")
             .hasLength(validString, 1, 10, "string")
 
             // Test collection methods return BatchValidator
-            .notNullOrEmpty(validList, "list")
+            .notEmpty(validList, "list")
             .hasSize(validList, 1, 5, "list")
 
             // Test numeric methods return BatchValidator
@@ -218,9 +218,9 @@ class BatchValidatorTest {
         ValidCheck.check()
             .notNull(nullValue)
             .inRange(outOfRange, 1, 50)
-            .notNullOrEmpty(nullValue)
-            .notNullOrEmpty(emptyList)
-            .notNullOrEmpty(emptyMap)
+            .notEmpty(nullValue)
+            .notEmpty(emptyList)
+            .notEmpty(emptyMap)
             .notBlank(blankString)
             .hasLength(longString, 1, 100)
             .hasSize(smallList, 2, 5)

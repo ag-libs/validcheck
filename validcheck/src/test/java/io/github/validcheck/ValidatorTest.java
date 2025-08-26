@@ -119,27 +119,27 @@ class ValidatorTest {
     String nullString = null;
     String paramName = "stringParam";
 
-    // When & Then - Test string notNullOrEmpty with name (valid)
-    ValidCheck.require().notNullOrEmpty(validString, paramName);
+    // When & Then - Test string notEmpty with name (valid)
+    ValidCheck.require().notEmpty(validString, paramName);
 
-    // When & Then - Test string notNullOrEmpty with name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(emptyString, paramName))
+    // When & Then - Test string notEmpty with name (empty)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyString, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'stringParam' must not be null or empty");
 
-    // When & Then - Test string notNullOrEmpty with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(nullString, paramName))
+    // When & Then - Test string notEmpty with name (null)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullString, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'stringParam' must not be null or empty");
 
-    // When & Then - Test string notNullOrEmpty with supplier (empty)
+    // When & Then - Test string notEmpty with supplier (empty)
     assertThatThrownBy(
-            () -> ValidCheck.require().notNullOrEmpty(emptyString, () -> "String cannot be empty"))
+            () -> ValidCheck.require().notEmpty(emptyString, () -> "String cannot be empty"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("String cannot be empty");
 
-    // When & Then - Test string notNullOrEmpty without name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(emptyString))
+    // When & Then - Test string notEmpty without name (empty)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyString))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
   }
@@ -152,29 +152,27 @@ class ValidatorTest {
     List<String> nullCollection = null;
     String paramName = "collection";
 
-    // When & Then - Test collection notNullOrEmpty with name (valid)
-    ValidCheck.require().notNullOrEmpty(validCollection, paramName);
+    // When & Then - Test collection notEmpty with name (valid)
+    ValidCheck.require().notEmpty(validCollection, paramName);
 
-    // When & Then - Test collection notNullOrEmpty with name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(emptyCollection, paramName))
+    // When & Then - Test collection notEmpty with name (empty)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyCollection, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'collection' must not be null or empty");
 
-    // When & Then - Test collection notNullOrEmpty with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(nullCollection, paramName))
+    // When & Then - Test collection notEmpty with name (null)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullCollection, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'collection' must not be null or empty");
 
-    // When & Then - Test collection notNullOrEmpty with supplier (empty)
+    // When & Then - Test collection notEmpty with supplier (empty)
     assertThatThrownBy(
-            () ->
-                ValidCheck.require()
-                    .notNullOrEmpty(emptyCollection, () -> "Collection is required"))
+            () -> ValidCheck.require().notEmpty(emptyCollection, () -> "Collection is required"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Collection is required");
 
-    // When & Then - Test collection notNullOrEmpty without name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(emptyCollection))
+    // When & Then - Test collection notEmpty without name (empty)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyCollection))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
   }
@@ -187,27 +185,26 @@ class ValidatorTest {
     Map<String, String> nullMap = null;
     String paramName = "mapParam";
 
-    // When & Then - Test map notNullOrEmpty with name (valid)
-    ValidCheck.require().notNullOrEmpty(validMap, paramName);
+    // When & Then - Test map notEmpty with name (valid)
+    ValidCheck.require().notEmpty(validMap, paramName);
 
-    // When & Then - Test map notNullOrEmpty with name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(emptyMap, paramName))
+    // When & Then - Test map notEmpty with name (empty)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyMap, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'mapParam' must not be null or empty");
 
-    // When & Then - Test map notNullOrEmpty with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(nullMap, paramName))
+    // When & Then - Test map notEmpty with name (null)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullMap, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'mapParam' must not be null or empty");
 
-    // When & Then - Test map notNullOrEmpty with supplier (empty)
-    assertThatThrownBy(
-            () -> ValidCheck.require().notNullOrEmpty(emptyMap, () -> "Map cannot be empty"))
+    // When & Then - Test map notEmpty with supplier (empty)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyMap, () -> "Map cannot be empty"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Map cannot be empty");
 
-    // When & Then - Test map notNullOrEmpty without name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(emptyMap))
+    // When & Then - Test map notEmpty without name (empty)
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyMap))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
   }
@@ -559,11 +556,11 @@ class ValidatorTest {
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be between 1 and 10");
 
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(nullString))
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullString))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
 
-    assertThatThrownBy(() -> ValidCheck.require().notNullOrEmpty(List.of()))
+    assertThatThrownBy(() -> ValidCheck.require().notEmpty(List.of()))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
 

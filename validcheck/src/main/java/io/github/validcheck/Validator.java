@@ -401,9 +401,8 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(String value, String name) {
-    return notNullOrEmpty(
-        value, () -> formatMessage(value, name, "must not be null or empty", false));
+  public Validator notEmpty(String value, String name) {
+    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
   }
 
   /**
@@ -414,7 +413,7 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(String value, Supplier<String> messageSupplier) {
+  public Validator notEmpty(String value, Supplier<String> messageSupplier) {
     return assertFalse(value == null || value.isEmpty(), messageSupplier);
   }
 
@@ -425,8 +424,8 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(String value) {
-    return notNullOrEmpty(value, (String) null);
+  public Validator notEmpty(String value) {
+    return notEmpty(value, (String) null);
   }
 
   /**
@@ -437,9 +436,8 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(Collection<?> value, String name) {
-    return notNullOrEmpty(
-        value, () -> formatMessage(value, name, "must not be null or empty", false));
+  public Validator notEmpty(Collection<?> value, String name) {
+    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
   }
 
   /**
@@ -450,7 +448,7 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(Collection<?> value, Supplier<String> messageSupplier) {
+  public Validator notEmpty(Collection<?> value, Supplier<String> messageSupplier) {
     return assertFalse(value == null || value.isEmpty(), messageSupplier);
   }
 
@@ -461,8 +459,8 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(Collection<?> value) {
-    return notNullOrEmpty(value, (String) null);
+  public Validator notEmpty(Collection<?> value) {
+    return notEmpty(value, (String) null);
   }
 
   /**
@@ -473,9 +471,8 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(Map<?, ?> value, String name) {
-    return notNullOrEmpty(
-        value, () -> formatMessage(value, name, "must not be null or empty", false));
+  public Validator notEmpty(Map<?, ?> value, String name) {
+    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
   }
 
   /**
@@ -486,7 +483,7 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
+  public Validator notEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
     return assertFalse(value == null || value.isEmpty(), messageSupplier);
   }
 
@@ -497,8 +494,8 @@ public class Validator {
    * @return this validator instance for method chaining
    * @throws ValidationException immediately if value is null or empty and fail-fast is enabled
    */
-  public Validator notNullOrEmpty(Map<?, ?> value) {
-    return notNullOrEmpty(value, (String) null);
+  public Validator notEmpty(Map<?, ?> value) {
+    return notEmpty(value, (String) null);
   }
 
   /**
