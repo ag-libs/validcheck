@@ -2,13 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.github.validcheck</groupId>
+  <groupId>io.github.ag-libs.validcheck</groupId>
   <artifactId>validcheck-parent</artifactId>
   <version>0.9.7-SNAPSHOT</version>
 
   <name>validcheck-parent</name>
   <description>Java runtime validation library</description>
-  <url>https://github.com/validcheck/validcheck</url>
+  <url>https://github.com/ag-libs/validcheck</url>
 
   <packaging>pom</packaging>
 
@@ -28,9 +28,9 @@
   </developers>
 
   <scm>
-    <connection>scm:git:https://github.com/validcheck/validcheck.git</connection>
-    <developerConnection>scm:git:https://github.com/validcheck/validcheck.git</developerConnection>
-    <url>https://github.com/validcheck/validcheck/tree/main</url>
+    <connection>scm:git:https://github.com/ag-libs/validcheck.git</connection>
+    <developerConnection>scm:git:https://github.com/ag-libs/validcheck.git</developerConnection>
+    <url>https://github.com/ag-libs/validcheck/tree/main</url>
     <tag>HEAD</tag>
   </scm>
 

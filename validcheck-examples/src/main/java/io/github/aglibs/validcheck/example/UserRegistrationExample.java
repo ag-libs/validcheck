@@ -1,6 +1,6 @@
-package io.github.validcheck.example;
+package io.github.aglibs.validcheck.example;
 
-import io.github.validcheck.ValidCheck;
+import io.github.aglibs.validcheck.ValidCheck;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
