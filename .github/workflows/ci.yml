@@ -45,7 +45,7 @@ jobs:
         run: mvn install -DskipTests javadoc:jar source:jar-no-fork
 
       - name: Sonar
-        run: mvn sonar:sonar -Dsonar.projectKey=validcheck -Dsonar.organization=validcheck
+        run: mvn sonar:sonar -Dsonar.projectKey=ag-libs_validcheck -Dsonar.organization=ag-libs
         if: ${{ matrix.java == '21' && matrix.os == 'ubuntu-latest' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

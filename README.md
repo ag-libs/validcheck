@@ -28,16 +28,16 @@ Maven:
 
 ```xml
 <dependency>
-  <groupId>io.github.validcheck</groupId>
+  <groupId>io.github.ag-libs.validcheck</groupId>
   <artifactId>validcheck</artifactId>
-  <version>0.9.5</version>
+  <version>0.9.8</version>
 </dependency>
 ```
 
 Gradle:
 
 ```gradle
-implementation 'io.github.validcheck:validcheck:0.9.5'
+implementation 'io.github.ag-libs.validcheck:validcheck:0.9.8'
 ```
 
 ## Quick Start
@@ -290,7 +290,7 @@ The library is designed to be easily extensible. You can extend the `Validator` 
 
 Complete examples available in the [examples module](validcheck-examples/):
 
-- [User Registration](validcheck-examples/src/main/java/io/github/validcheck/example/UserRegistrationExample.java) - Record validation with batch processing, conditional validation for optional fields, and single-bound validation examples
+- [User Registration](validcheck-examples/src/main/java/io/github/aglibs/validcheck/example/UserRegistrationExample.java) - Record validation with batch processing, conditional validation for optional fields, and single-bound validation examples
 
 ## Requirements
 

@@ -4,8 +4,6 @@
  * <p>Provides fluent API for method and constructor parameter validation without reflection or
  * external frameworks.
  */
-module io.github.validcheck {
-  requires java.xml;
-
-  exports io.github.validcheck;
+module io.github.aglibs.validcheck {
+  exports io.github.aglibs.validcheck;
 }
