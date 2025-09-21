@@ -104,4 +104,4 @@ jobs:
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "🎉 Successfully released ValidCheck $LATEST_TAG to Maven Central!"
-          echo "📦 Available at: https://central.sonatype.com/artifact/io.github.ag-libs/validcheck"
+          echo "📦 Available at: https://central.sonatype.com/artifact/io.github.ag-libs.validcheck/validcheck"
