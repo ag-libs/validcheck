@@ -1,8 +1,8 @@
 # ValidCheck
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=validcheck&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=validcheck)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=validcheck&metric=coverage)](https://sonarcloud.io/summary/new_code?id=validcheck)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=validcheck&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=validcheck)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ag-libs_validcheck&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ag-libs_validcheck)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ag-libs_validcheck&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ag-libs_validcheck)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ag-libs_validcheck&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ag-libs_validcheck)
 
 A **simple**, **IDE-friendly**, **fluent** and **extensible** Java validation library for runtime parameter validation. Zero dependencies, perfect for records and constructors.
 
