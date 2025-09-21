@@ -1,3 +1,3 @@
-module io.github.validcheck.examples {
-  requires io.github.validcheck;
+module io.github.aglibs.validcheck.examples {
+  requires io.github.aglibs.validcheck;
 }

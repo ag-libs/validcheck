@@ -1,4 +1,4 @@
-package io.github.validcheck;
+package io.github.aglibs.validcheck;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

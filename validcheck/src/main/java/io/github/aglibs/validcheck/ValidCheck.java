@@ -1,4 +1,4 @@
-package io.github.validcheck;
+package io.github.aglibs.validcheck;
 
 /**
  * Main entry point for the ValidCheck validation library. Provides static factory methods to create

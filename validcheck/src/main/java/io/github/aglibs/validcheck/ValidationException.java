@@ -1,4 +1,4 @@
-package io.github.validcheck;
+package io.github.aglibs.validcheck;
 
 import java.util.Collections;
 import java.util.List;
