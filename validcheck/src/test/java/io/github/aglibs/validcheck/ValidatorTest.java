@@ -1127,4 +1127,82 @@ class ValidatorTest {
     assertThatThrownBy(() -> ValidCheck.require().notNull(null, (String) null))
         .hasMessage("parameter must not be null"); // Should use "parameter" when name is null
   }
+
+  @Test
+  void includeValuesTrueShowsValuesInErrorMessages() {
+    assertThatThrownBy(() -> inputValuesValidator().isPositive(-5, "age"))
+        .hasMessage("'age' must be positive, but it was -5");
+
+    assertThatThrownBy(() -> inputValuesValidator().isNegative(10, "temperature"))
+        .hasMessage("'temperature' must be negative, but it was 10");
+
+    assertThatThrownBy(() -> inputValuesValidator().inRange(100, 1, 50, "count"))
+        .hasMessage("'count' must be between 1 and 50, but it was 100");
+
+    assertThatThrownBy(() -> inputValuesValidator().min(-5, 0, "value"))
+        .hasMessage("'value' must be at least 0, but it was -5");
+
+    assertThatThrownBy(() -> inputValuesValidator().max(100, 50, "value"))
+        .hasMessage("'value' must be at most 50, but it was 100");
+
+    assertThatThrownBy(() -> inputValuesValidator().isNonNegative(-10, "balance"))
+        .hasMessage("'balance' must be non-negative, but it was -10");
+
+    assertThatThrownBy(() -> inputValuesValidator().isNonPositive(5, "debt"))
+        .hasMessage("'debt' must be non-positive, but it was 5");
+
+    // Test string validations include the value
+    assertThatThrownBy(() -> inputValuesValidator().hasLength("ab", 5, 10, "username"))
+        .hasMessage("'username' must have length between 5 and 10, but it was 'ab'");
+
+    assertThatThrownBy(() -> inputValuesValidator().matches("ABC123", "^[a-z]+$", "code"))
+        .hasMessage("'code' must match pattern '^[a-z]+$', but it was 'ABC123'");
+
+    // Test with very long string - should truncate
+    String longString =
+        "a".repeat(150); // More than MAX_DISPLAYED_VALUE_LENGTH (100) so it will be truncated
+    assertThatThrownBy(() -> inputValuesValidator().hasLength(longString, 1, 10, "text"))
+        .hasMessageContaining("must have length between 1 and 10, but it was 'aaaaaa")
+        .hasMessageContaining("...'"); // Should be truncated with ...
+
+    // Test collection validations include the value
+    assertThatThrownBy(() -> inputValuesValidator().hasSize(List.of("a"), 2, 5, "items"))
+        .hasMessage("'items' must have size between 2 and 5, but it was [a]");
+
+    // Test map validations include the value
+    assertThatThrownBy(() -> inputValuesValidator().hasSize(Map.of(), 1, 5, "config"))
+        .hasMessage("'config' must have size between 1 and 5, but it was {}");
+
+    // Test that non-string objects are displayed without quotes
+    assertThatThrownBy(() -> inputValuesValidator().isNull(42, "number"))
+        .hasMessage("'number' must be null, but it was 42");
+
+    // Test parameter-less methods with includeValues=true
+    assertThatThrownBy(() -> inputValuesValidator().isPositive(-10))
+        .hasMessage("parameter must be positive, but it was -10");
+
+    assertThatThrownBy(() -> inputValuesValidator().hasLength("x", 5, 10))
+        .hasMessage("parameter must have length between 5 and 10, but it was 'x'");
+  }
+
+  private static Validator inputValuesValidator() {
+    return new Validator(true, true, true);
+  }
+
+  @Test
+  void batchValidatorWithIncludeValuesTrue() {
+    // Test BatchValidator with includeValues=true
+    BatchValidator batchWithValues = new BatchValidator(true, true); // includeValues = true
+
+    batchWithValues
+        .isPositive(-5, "age")
+        .hasLength("ab", 5, 10, "username")
+        .inRange(100, 1, 50, "score");
+
+    assertThatThrownBy(batchWithValues::validate)
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'age' must be positive, but it was -5")
+        .hasMessageContaining("'username' must have length between 5 and 10, but it was 'ab'")
+        .hasMessageContaining("'score' must be between 1 and 50, but it was 100");
+  }
 }
