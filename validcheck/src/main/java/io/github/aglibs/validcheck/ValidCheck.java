@@ -23,23 +23,24 @@ public final class ValidCheck {
    * Creates a new batch validator that collects all validation errors before throwing. This allows
    * multiple validation failures to be reported at once.
    *
-   * @return a new {@link BatchValidator} instance configured to include values and fail-fast
+   * @return a new {@link BatchValidator} instance configured to exclude values and fill stack
+   *     traces
    * @see BatchValidator
    */
   public static BatchValidator check() {
-    return new BatchValidator(true, true);
+    return new BatchValidator(false, true);
   }
 
   /**
    * Creates a new validator with fail-fast behavior. Throws a {@link ValidationException}
    * immediately upon the first validation failure.
    *
-   * @return a new {@link Validator} instance configured to include values, fail-fast, and fill
+   * @return a new {@link Validator} instance configured to exclude values, fail-fast, and fill
    *     stack traces
    * @see Validator
    */
   public static Validator require() {
-    return new Validator(true, true, true);
+    return new Validator(false, true, true);
   }
 
   /**

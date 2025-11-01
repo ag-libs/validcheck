@@ -31,7 +31,7 @@ class BatchValidatorTest {
         .containsExactlyInAnyOrder(
             "'name' must not be null",
             "'email' must not be null or empty",
-            "'age' must be positive, but it was -5");
+            "'age' must be positive");
 
     // Then - Test isValid() method
     assertThat(validator.isValid()).isFalse();
@@ -40,7 +40,7 @@ class BatchValidatorTest {
     assertThatThrownBy(validator::validate)
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining(
-            "'name' must not be null; 'email' must not be null or empty; 'age' must be positive, but it was -5");
+            "'name' must not be null; 'email' must not be null or empty; 'age' must be positive");
 
     // Given - Valid data
     BatchValidator validValidator =
@@ -65,25 +65,32 @@ class BatchValidatorTest {
     BatchValidator combinedValidator =
         ValidCheck.check()
             .notEmpty("", "email") // Add one more error
+            .isNull("")
+            .isNull("", "a")
+            .isNull("", () -> "b")
+            .isNull(null, "ok")
             .include(userValidator)
             .include(addressValidator);
 
     // Then - Should have combined all errors from all validators
-    assertThat(combinedValidator.getErrors()).hasSize(5);
+    assertThat(combinedValidator.getErrors()).hasSize(8);
     assertThat(combinedValidator.getErrors())
         .containsExactlyInAnyOrder(
+            "parameter must be null",
+            "'a' must be null",
+            "b",
             "'email' must not be null or empty",
             "'username' must not be null",
-            "'password' must have length between 5 and 20, but it was 'ab'",
+            "'password' must have length between 5 and 20",
             "'street' must not be blank",
-            "'zipCode' must be positive, but it was -1");
+            "'zipCode' must be positive");
 
     // When - Include validator with no errors
     BatchValidator emptyValidator = ValidCheck.check();
     combinedValidator.include(emptyValidator);
 
     // Then - Should not change error count
-    assertThat(combinedValidator.getErrors()).hasSize(5);
+    assertThat(combinedValidator.getErrors()).hasSize(8);
   }
 
   @Test
@@ -261,22 +268,22 @@ class BatchValidatorTest {
         .hasSize(17)
         .containsOnly(
             "parameter must not be null",
-            "parameter must be between 1 and 50, but it was 100",
+            "parameter must be between 1 and 50",
             "parameter must not be null or empty",
             "parameter must not be null or empty",
             "parameter must not be null or empty",
             "parameter must not be blank",
-            "parameter must have length between 1 and 100, but it was 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...'",
-            "parameter must have size between 2 and 5, but it was [a]",
-            "parameter must have size between 2 and 5, but it was {}",
-            "parameter must be positive, but it was -5",
-            "parameter must be negative, but it was 5",
-            "parameter must match pattern '^[a-z]+$', but it was 'ABC123'",
-            "parameter must match pattern '^[a-z]+$', but it was 'ABC123'",
-            "parameter must be non-negative, but it was -5",
-            "parameter must be non-positive, but it was 5",
-            "parameter must be at least 0, but it was -5",
-            "parameter must be at most 50, but it was 100");
+            "parameter must have length between 1 and 100",
+            "parameter must have size between 2 and 5",
+            "parameter must have size between 2 and 5",
+            "parameter must be positive",
+            "parameter must be negative",
+            "parameter must match pattern '^[a-z]+$'",
+            "parameter must match pattern '^[a-z]+$'",
+            "parameter must be non-negative",
+            "parameter must be non-positive",
+            "parameter must be at least 0",
+            "parameter must be at most 50");
     assertThat(validator.isValid()).isFalse();
 
     // When & Then - Validate should throw with all collected errors

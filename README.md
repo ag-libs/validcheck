@@ -8,10 +8,10 @@ A **simple**, **IDE-friendly**, **fluent** and **extensible** Java validation li
 
 ## Why ValidCheck?
 
-**Simple** - Clean API with intuitive method names  
-**IDE-friendly** - Full autocomplete support and type safety  
-**Fluent** - Method chaining for readable validation code  
-**Extensible** - Easy to add custom validation methods
+- Clean API with intuitive method names
+- Full autocomplete support and type safety
+- Method chaining for readable validation code
+- Easy to add custom validation methods
 
 ```java
 // Simple and readable
@@ -259,9 +259,9 @@ try {
     ValidCheck.require().isPositive(-5, "age");
 } catch (ValidationException e) {
     System.out.println(e.getMessage()); 
-    // "'age' must be positive, but it was -5"
+    // "'age' must be positive"
     
-    List<String> errors = e.getErrors(); // ["'age' must be positive, but it was -5"]
+    List<String> errors = e.getErrors(); // ["'age' must be positive"]
 }
 ```
 
@@ -275,10 +275,10 @@ try {
         .validate();
 } catch (ValidationException e) {
     System.out.println(e.getMessage());
-    // "'username' must not be null; 'age' must be positive, but it was -1"
+    // "'username' must not be null; 'age' must be positive"
     
     List<String> errors = e.getErrors();
-    // ["'username' must not be null", "'age' must be positive, but it was -1"]
+    // ["'username' must not be null", "'age' must be positive"]
 }
 ```
 

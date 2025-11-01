@@ -41,12 +41,12 @@ import java.util.regex.Pattern;
  * <pre>{@code
  * public class MyValidator extends Validator {
  *
- *   public static MyValidator strictValidation() {
- *     return new MyValidator(false, true, true); // No values in errors, fail-fast, with stack traces
+ *   public static MyValidator withValues() {
+ *     return new MyValidator(true, true, true); // Include values in errors, fail-fast, with stack traces
  *   }
  *
  *   public static MyValidator lenientValidation() {
- *     return new MyValidator(true, false, false); // Include values, batch errors, no stack traces
+ *     return new MyValidator(false, false, false); // Exclude values, batch errors, no stack traces
  *   }
  *
  *   protected MyValidator(boolean includeValues, boolean failFast, boolean fillStackTrace) {
