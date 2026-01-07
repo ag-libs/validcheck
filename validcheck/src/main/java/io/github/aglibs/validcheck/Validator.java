@@ -127,7 +127,7 @@ public class Validator {
   }
 
   /** Throws ValidationException if any errors have been collected. */
-  protected void validate() {
+  public void validate() {
     if (!errors.isEmpty()) {
       final var errorMessage = String.join("; ", errors);
       throw exceptionFactory.apply(errorMessage, errors);

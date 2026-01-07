@@ -125,16 +125,6 @@ public class BatchValidator extends Validator {
     return errors.isEmpty();
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Validates that no errors have been collected and throws an exception if any exist.
-   */
-  @Override
-  public void validate() {
-    super.validate();
-  }
-
   @Override
   public BatchValidator assertTrue(boolean condition, String message) {
     return (BatchValidator) super.assertTrue(condition, message);
