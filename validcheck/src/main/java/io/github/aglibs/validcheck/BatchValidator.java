@@ -3,6 +3,7 @@ package io.github.aglibs.validcheck;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -69,10 +70,11 @@ public class BatchValidator extends Validator {
    * Constructs a new BatchValidator with the specified configuration.
    *
    * @param includeValues whether to include actual values in error messages for debugging
-   * @param fillStackTrace whether to fill stack traces in thrown exceptions
+   * @param exceptionFactory factory that creates the desired validation exception.
    */
-  protected BatchValidator(boolean includeValues, boolean fillStackTrace) {
-    super(includeValues, false, fillStackTrace);
+  protected BatchValidator(
+      boolean includeValues, BiFunction<String, List<String>, RuntimeException> exceptionFactory) {
+    super(includeValues, false, exceptionFactory);
   }
 
   /**
