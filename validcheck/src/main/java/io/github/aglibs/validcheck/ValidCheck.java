@@ -1,5 +1,8 @@
 package io.github.aglibs.validcheck;
 
+import java.util.List;
+import java.util.function.BiFunction;
+
 /**
  * Main entry point for the ValidCheck validation library. Provides static factory methods to create
  * validators for parameter validation.
@@ -26,20 +29,53 @@ public final class ValidCheck {
    * @return a new {@link BatchValidator} instance configured to include values and fail-fast
    * @see BatchValidator
    */
+  public static BatchValidator collect() {
+    return collect((message, errors) -> new IllegalArgumentException(String.join(", ", errors)));
+  }
+
+  /**
+   * Creates a new batch validator that collects all validation errors before throwing. This allows
+   * multiple validation failures to be reported at once.
+   *
+   * @param exceptionFactory factory that creates the desired validation exception.
+   * @return a new {@link BatchValidator} instance configured to include values and fail-fast
+   * @see BatchValidator
+   */
+  public static BatchValidator collect(BiFunction<String, List<String>, RuntimeException> exceptionFactory) {
+      return new BatchValidator(true, exceptionFactory);
+  }
+
+  @Deprecated
   public static BatchValidator check() {
-    return new BatchValidator(true, true);
+    return collect(ValidationException::new);
   }
 
   /**
    * Creates a new validator with fail-fast behavior. Throws a {@link ValidationException}
    * immediately upon the first validation failure.
    *
-   * @return a new {@link Validator} instance configured to include values, fail-fast, and fill
-   *     stack traces
+   * @return a new {@link Validator} instance configured to include values, fail-fast
    * @see Validator
    */
+  public static Validator failFast() {
+    return failFast((message, errors) -> new IllegalArgumentException(String.join(", ", errors)));
+  }
+
+  /**
+   * Creates a new validator with fail-fast behavior. Throws a {@link ValidationException}
+   * immediately upon the first validation failure.
+   *
+   * @param exceptionFactory factory that creates the desired validation exception.
+   * @return a new {@link Validator} instance configured to include values, fail-fast
+   * @see Validator
+   */
+  public static Validator failFast(BiFunction<String, List<String>, RuntimeException> exceptionFactory) {
+      return new Validator(true, true, exceptionFactory);
+  }
+
+  @Deprecated
   public static Validator require() {
-    return new Validator(true, true, true);
+    return failFast(ValidationException::new);
   }
 
   /**

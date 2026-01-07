@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -77,23 +79,25 @@ public class Validator {
   /** Whether to throw immediately on first validation failure. */
   protected final boolean failFast;
 
-  /** Whether to fill stack traces in thrown exceptions. */
-  protected final boolean fillStackTrace;
-
   /** List of collected validation errors. */
   protected final List<String> errors;
+
+  private final BiFunction<String, List<String>, RuntimeException> exceptionFactory;
 
   /**
    * Constructs a new Validator with the specified configuration.
    *
    * @param includeValues whether to include actual values in error messages for debugging
    * @param failFast whether to throw immediately on first validation failure or collect all errors
-   * @param fillStackTrace whether to fill stack traces in thrown exceptions
+   * @param exceptionFactory factory that creates the desired validation exception.
    */
-  protected Validator(boolean includeValues, boolean failFast, boolean fillStackTrace) {
+  protected Validator(
+      boolean includeValues,
+      boolean failFast,
+      BiFunction<String, List<String>, RuntimeException> exceptionFactory) {
     this.includeValues = includeValues;
     this.failFast = failFast;
-    this.fillStackTrace = fillStackTrace;
+    this.exceptionFactory = Objects.requireNonNull(exceptionFactory);
 
     errors = new ArrayList<>();
   }
@@ -123,10 +127,10 @@ public class Validator {
   }
 
   /** Throws ValidationException if any errors have been collected. */
-  protected void validate() {
+  public void validate() {
     if (!errors.isEmpty()) {
       final var errorMessage = String.join("; ", errors);
-      throw ValidationException.create(fillStackTrace, errorMessage, errors);
+      throw exceptionFactory.apply(errorMessage, errors);
     }
   }
 

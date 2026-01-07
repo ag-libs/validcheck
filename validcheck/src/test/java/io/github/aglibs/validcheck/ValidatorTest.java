@@ -1102,7 +1102,8 @@ class ValidatorTest {
   @Test
   void edgeCaseCoverageForMissedBranches() {
     // Test formatMessage with includeValue=false (covers missed branch in formatMessage)
-    Validator validatorNoValues = new Validator(false, true, true); // includeValues = false
+    Validator validatorNoValues =
+        new Validator(false, true, ValidationException::new); // includeValues = false
     assertThatThrownBy(() -> validatorNoValues.notNull(null, "test"))
         .hasMessage("'test' must not be null"); // Should not include value
 
