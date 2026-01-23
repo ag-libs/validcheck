@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -133,7 +134,7 @@ public class Validator {
       boolean includeValues,
       boolean failFast,
       boolean fillStackTrace,
-      java.util.function.Function<List<String>, RuntimeException> exceptionFactory) {
+      Function<List<String>, RuntimeException> exceptionFactory) {
     this.includeValues = includeValues;
     this.failFast = failFast;
     this.fillStackTrace = fillStackTrace;

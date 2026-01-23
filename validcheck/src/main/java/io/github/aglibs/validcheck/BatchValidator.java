@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -82,7 +83,7 @@ public class BatchValidator extends Validator {
   protected BatchValidator(
       boolean includeValues,
       boolean fillStackTrace,
-      java.util.function.Function<java.util.List<String>, RuntimeException> exceptionFactory) {
+      Function<List<String>, RuntimeException> exceptionFactory) {
     super(includeValues, false, fillStackTrace, exceptionFactory);
   }
 
