@@ -284,7 +284,41 @@ try {
 
 ## Extensibility
 
-The library is designed to be easily extensible. You can extend the `Validator` and `BatchValidator` classes to add domain-specific validation methods. See the Javadoc in the source code for detailed examples of creating custom validators.
+### Custom Exception Types
+
+ValidCheck allows you to throw custom exception types instead of the default `ValidationException`. Simply pass an exception factory function to the `Validator` or `BatchValidator` constructor:
+
+```java
+// Throw IllegalArgumentException instead of ValidationException
+var validator = new Validator(true, true, true,
+    errors -> new IllegalArgumentException(String.join("; ", errors)));
+
+validator.notNull(null, "value"); // throws IllegalArgumentException
+
+// Custom formatting
+var validator = new BatchValidator(true, true,
+    errors -> new MyException("Validation failed:\n- " + String.join("\n- ", errors)));
+```
+
+This is useful when integrating with frameworks that expect specific exception types (Spring, Jakarta Bean Validation, etc.).
+
+### Custom Validation Methods
+
+You can extend the `Validator` and `BatchValidator` classes to add domain-specific validation methods:
+
+```java
+public class MyValidator extends Validator {
+    protected MyValidator() {
+        super(true, true, true, null);
+    }
+    
+    public MyValidator isValidEmail(String email, String name) {
+        return (MyValidator) matches(email, EMAIL_PATTERN, name);
+    }
+}
+```
+
+See the Javadoc in the source code for detailed examples.
 
 ## Examples
 
