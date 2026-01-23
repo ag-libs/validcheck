@@ -4,23 +4,7 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ag-libs_validcheck&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ag-libs_validcheck)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ag-libs_validcheck&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ag-libs_validcheck)
 
-A **simple**, **IDE-friendly**, **fluent** and **extensible** Java validation library for runtime parameter validation. Zero dependencies, perfect for records and constructors.
-
-## Why ValidCheck?
-
-**Simple** - Clean API with intuitive method names  
-**IDE-friendly** - Full autocomplete support and type safety  
-**Fluent** - Method chaining for readable validation code  
-**Extensible** - Easy to add custom validation methods
-
-```java
-// Simple and readable
-ValidCheck.require()
-    .notNull(username, "username")
-    .hasLength(username, 3, 20, "username")
-    .matches(email, "^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
-    .isPositive(age, "age");
-```
+A Java validation library for runtime parameter validation with zero dependencies.
 
 ## Installation
 
@@ -40,13 +24,13 @@ Gradle:
 implementation 'io.github.ag-libs.validcheck:validcheck:0.9.8'
 ```
 
-## Quick Start
+## Usage
 
-### Java Record Validation
+### Record Validation
 
-ValidCheck is particularly powerful with Java records, where validation in the compact constructor ensures immutable objects are never created in an invalid state. This prevents invalid data from propagating through your application and makes debugging much easier since validation failures happen immediately at object creation.
+Use ValidCheck in record compact constructors to validate constructor parameters.
 
-### Record Validation (Fail-Fast)
+**Fail-Fast** - Throws on first validation failure:
 
 ```java
 public record User(String username, String email, int age) {
@@ -60,7 +44,7 @@ public record User(String username, String email, int age) {
 }
 ```
 
-### Record Validation (Batch - Collect All Errors)
+**Batch** - Collects all errors before throwing:
 
 ```java
 public record UserRegistration(String username, String email, String password) {
@@ -76,30 +60,28 @@ public record UserRegistration(String username, String email, String password) {
 }
 ```
 
-## Core API Design
+## Validation Strategies
 
-### Two Validation Strategies
+ValidCheck supports two validation strategies:
 
-**Fail-Fast** - Stops at first error:
+**Fail-Fast** - Throws on first validation failure:
 
 ```java
-ValidCheck.require()  // Throws on first validation failure
+ValidCheck.require()
     .notNull(value, "field")
     .isPositive(number, "count");
 ```
 
-**Batch** - Collects all errors:
+**Batch** - Collects all errors before throwing:
 
 ```java
-ValidCheck.check()  // Collects all errors before throwing
+ValidCheck.check()
     .notNull(value, "field")
     .isPositive(number, "count")
-    .validate();  // Throws with all collected errors
+    .validate();
 ```
 
-### IDE-Friendly Method Names
-
-All validation methods have clear, self-documenting names with excellent IDE support. As you type `ValidCheck.check().notNull(...).`, your IDE will suggest only the methods that make sense for the next validation:
+## Validation Methods
 
 ```java
 // Null checks
@@ -130,17 +112,14 @@ All validation methods have clear, self-documenting names with excellent IDE sup
 .assertFalse(condition, "message")
 ```
 
-ValidCheck provides **comprehensive validation coverage** with over 120+ validation methods including:
-- All standard validation methods with 3 overloads each (named, message supplier, parameter-less)
-- Conditional `nullOr*` variants for optional field validation
-- BatchValidator overrides for fluent method chaining
-- Single-bound `min()`/`max()` methods alongside traditional `inRange()`
+Each validation method has three overloads:
+- Named: `.notNull(value, "fieldName")`
+- Message supplier: `.notNull(value, () -> "custom message")`
+- Parameter-less: `.notNull(value)` - uses "parameter" as field name
 
-The IDE autocomplete guides you to the right validation methods, making the API discoverable and reducing the need to memorize method names.
+### Method Chaining
 
-### Fluent Chaining
-
-Chain validations naturally:
+Validation methods return the validator instance for chaining:
 
 ```java
 ValidCheck.require()
@@ -153,9 +132,9 @@ ValidCheck.require()
 
 ## Advanced Features
 
-### Conditional Validation with when()
+### Conditional Validation
 
-Apply validations only when conditions are met:
+Use `when()` to apply validations conditionally:
 
 ```java
 ValidCheck.check()
@@ -165,9 +144,9 @@ ValidCheck.check()
     .validate();
 ```
 
-### Conditional Validation for Optional Fields
+### Validating Optional Fields
 
-ValidCheck provides `nullOr*` methods that allow validation of optional parameters - they pass if the value is null OR meets the validation criteria:
+Use `nullOr*` methods to validate values that may be null. These methods pass if the value is null or satisfies the validation:
 
 ```java
 public record UserProfile(
@@ -203,9 +182,9 @@ Available conditional methods:
 - `nullOrMatches()` - Pattern matching
 - `nullOrMin()` / `nullOrMax()` - Single-bound validation
 
-### Message Suppliers (Lazy Evaluation)
+### Message Suppliers
 
-Expensive message computation only when validation fails:
+Message suppliers are evaluated only when validation fails:
 
 ```java
 ValidCheck.require()
@@ -214,7 +193,7 @@ ValidCheck.require()
 
 ### Custom Error Messages
 
-Override default messages using message suppliers:
+Use message suppliers to override default error messages:
 
 ```java
 ValidCheck.require()
@@ -222,9 +201,9 @@ ValidCheck.require()
     .hasLength(text, 5, 20, () -> "Custom field must be 5-20 characters");
 ```
 
-### Include Other Validators
+### Combining Validators
 
-Combine multiple validation contexts:
+Use `include()` to combine multiple validation contexts:
 
 ```java
 BatchValidator userValidator = ValidCheck.check()
@@ -241,11 +220,11 @@ ValidCheck.check()
 
 ## Parameter-less Methods
 
-All validation methods support parameter-less versions for cleaner code:
+Validation methods can be called without a field name. The error message will use "parameter" as the field name:
 
 ```java
 ValidCheck.require()
-    .notNull(value)           // Uses "parameter" as field name
+    .notNull(value)           // "parameter must not be null"
     .isPositive(number)       // "parameter must be positive"
     .hasLength(text, 5, 20);  // "parameter must have length between 5 and 20"
 ```
