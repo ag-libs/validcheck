@@ -58,9 +58,15 @@ import java.util.regex.Pattern;
  * }
  * }</pre>
  *
+ * <p><strong>Note:</strong> By default, validation failures throw {@link ValidationException}. If
+ * {@link Validator#createException()} is overridden in a subclass, the custom exception type will
+ * be thrown instead. See {@link Validator} class documentation for details on custom exception
+ * types.
+ *
  * @since 1.0.0
  * @see ValidCheck#check()
  * @see Validator
+ * @see Validator#createException()
  * @see ValidationException
  */
 public class BatchValidator extends Validator {
@@ -69,10 +75,16 @@ public class BatchValidator extends Validator {
    * Constructs a new BatchValidator with the specified configuration.
    *
    * @param includeValues whether to include actual values in error messages for debugging
-   * @param fillStackTrace whether to fill stack traces in thrown exceptions
+   * @param fillStackTrace whether to fill stack traces in thrown exceptions (only applies when
+   *     using default ValidationException)
+   * @param exceptionFactory factory function to create exceptions from error list; if null, uses
+   *     default ValidationException
    */
-  protected BatchValidator(boolean includeValues, boolean fillStackTrace) {
-    super(includeValues, false, fillStackTrace);
+  protected BatchValidator(
+      boolean includeValues,
+      boolean fillStackTrace,
+      java.util.function.Function<java.util.List<String>, RuntimeException> exceptionFactory) {
+    super(includeValues, false, fillStackTrace, exceptionFactory);
   }
 
   /**

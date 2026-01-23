@@ -1102,7 +1102,7 @@ class ValidatorTest {
   @Test
   void edgeCaseCoverageForMissedBranches() {
     // Test formatMessage with includeValue=false (covers missed branch in formatMessage)
-    Validator validatorNoValues = new Validator(false, true, true); // includeValues = false
+    Validator validatorNoValues = new Validator(false, true, true, null); // includeValues = false
     assertThatThrownBy(() -> validatorNoValues.notNull(null, "test"))
         .hasMessage("'test' must not be null"); // Should not include value
 
@@ -1126,5 +1126,35 @@ class ValidatorTest {
     // Test formatMessage with null name (covers missed branch in formatMessage)
     assertThatThrownBy(() -> ValidCheck.require().notNull(null, (String) null))
         .hasMessage("parameter must not be null"); // Should use "parameter" when name is null
+  }
+
+  @Test
+  void customExceptionType() {
+    // Given - Validator with custom exception factory
+    var validator =
+        new Validator(
+            true, true, true, errors -> new IllegalArgumentException(String.join("; ", errors)));
+
+    // When & Then - Verify custom exception is thrown
+    assertThatThrownBy(() -> validator.notNull(null, "value"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("'value' must not be null");
+  }
+
+  @Test
+  void customExceptionWithCustomFormatting() {
+    // Given - BatchValidator with custom formatting (collects all errors)
+    var validator =
+        new BatchValidator(
+            true,
+            true,
+            errors -> new IllegalArgumentException("Errors:\n- " + String.join("\n- ", errors)));
+
+    // When & Then - Verify custom formatting with multiple errors
+    assertThatThrownBy(() -> validator.notNull(null, "field1").isPositive(-5, "field2").validate())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Errors:\n- ")
+        .hasMessageContaining("'field1' must not be null")
+        .hasMessageContaining("'field2' must be positive");
   }
 }
