@@ -58,10 +58,9 @@ import java.util.regex.Pattern;
  * }
  * }</pre>
  *
- * <p><strong>Note:</strong> By default, validation failures throw {@link ValidationException}. If
- * {@link Validator#createException()} is overridden in a subclass, the custom exception type will
- * be thrown instead. See {@link Validator} class documentation for details on custom exception
- * types.
+ * <p><strong>Note:</strong> By default, validation failures throw {@link ValidationException}. To
+ * throw custom exception types, pass an exception factory to the constructor. See {@link Validator}
+ * class documentation for details and examples.
  *
  * @since 1.0.0
  * @see ValidCheck#check()

@@ -2,6 +2,7 @@ package io.github.aglibs.validcheck;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,15 +43,19 @@ import java.util.regex.Pattern;
  * public class MyValidator extends Validator {
  *
  *   public static MyValidator strictValidation() {
- *     return new MyValidator(false, true, true); // No values in errors, fail-fast, with stack traces
+ *     // No values in errors, fail-fast, with stack traces, default exception
+ *     return new MyValidator(false, true, true, null);
  *   }
  *
  *   public static MyValidator lenientValidation() {
- *     return new MyValidator(true, false, false); // Include values, batch errors, no stack traces
+ *     // Include values, batch errors, no stack traces, default exception
+ *     return new MyValidator(true, false, false, null);
  *   }
  *
- *   protected MyValidator(boolean includeValues, boolean failFast, boolean fillStackTrace) {
- *     super(includeValues, failFast, fillStackTrace);
+ *   protected MyValidator(boolean includeValues, boolean failFast,
+ *                          boolean fillStackTrace,
+ *                          Function<List<String>, RuntimeException> exceptionFactory) {
+ *     super(includeValues, failFast, fillStackTrace, exceptionFactory);
  *   }
  *
  *   // Add custom validation methods
@@ -67,14 +72,25 @@ import java.util.regex.Pattern;
  *
  * <pre>{@code
  * // Custom exception with default formatting ("; " separator)
- * Validator validator = new Validator(true, true,
+ * Validator validator = new Validator(true, true, true,
  *     errors -> new IllegalArgumentException(String.join("; ", errors)));
  *
  * validator.notNull(null, "value"); // throws IllegalArgumentException
  *
  * // Custom formatting
- * Validator validator = new Validator(true, true,
+ * Validator validator = new Validator(true, true, true,
  *     errors -> new MyException("Errors:\n- " + String.join("\n- ", errors)));
+ * }</pre>
+ *
+ * <h2>Performance Optimization</h2>
+ *
+ * <p>For high-throughput validation where stack traces are not needed, disable stack trace
+ * generation:
+ *
+ * <pre>{@code
+ * // ValidationException without stack traces for better performance
+ * Validator validator = new Validator(true, true, false, null);
+ * validator.notNull(value, "field");
  * }</pre>
  *
  * @since 1.0.0
@@ -159,7 +175,8 @@ public class Validator {
 
   /**
    * Creates the exception to be thrown when validation fails. Uses the exception factory if
-   * provided, otherwise creates a default ValidationException.
+   * provided, otherwise creates a default ValidationException with the configured fillStackTrace
+   * setting.
    *
    * <p>This method can be overridden in subclasses for additional exception customization beyond
    * the factory.
@@ -169,10 +186,10 @@ public class Validator {
    */
   protected RuntimeException createException() {
     if (exceptionFactory != null) {
-      return exceptionFactory.apply(new ArrayList<>(errors));
+      return exceptionFactory.apply(Collections.unmodifiableList(errors));
     }
     final var errorMessage = String.join("; ", errors);
-    return ValidationException.create(true, errorMessage, errors);
+    return ValidationException.create(fillStackTrace, errorMessage, errors);
   }
 
   /**
