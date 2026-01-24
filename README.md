@@ -310,6 +310,10 @@ Complete examples available in the [examples module](validcheck-examples/):
 - Java 11+
 - Zero dependencies
 
+## AI Disclosure
+
+This project uses AI assistance in development. See [AI.md](AI.md) for details.
+
 ## License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
