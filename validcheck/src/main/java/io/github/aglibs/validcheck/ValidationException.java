@@ -46,8 +46,7 @@ public class ValidationException extends RuntimeException {
   }
 
   /**
-   * Returns the list of individual validation errors. Returns the list of individual validation
-   * errors.
+   * Returns the list of individual validation errors.
    *
    * @return an unmodifiable list of validation errors
    */
