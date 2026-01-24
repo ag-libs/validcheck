@@ -14,6 +14,10 @@ import org.junit.jupiter.api.Test;
 @SuppressWarnings({"ConstantValue"})
 class ValidatorTest {
 
+  private static Validator validator() {
+    return ValidCheck.require();
+  }
+
   @Test
   void assertionMethodsWithAllOverloads() {
     // Given - Test data for all assertion methods
@@ -25,13 +29,14 @@ class ValidatorTest {
     ValidCheck.require().assertTrue(validCondition, message);
 
     // When & Then - Test assertTrue with string message (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().assertTrue(invalidCondition, message))
+
+    assertThatThrownBy(() -> validator().assertTrue(invalidCondition, message))
         .isInstanceOf(ValidationException.class)
         .hasMessage(message);
 
     // When & Then - Test assertTrue with supplier message (invalid)
-    assertThatThrownBy(
-            () -> ValidCheck.require().assertTrue(invalidCondition, () -> "Dynamic: " + message))
+
+    assertThatThrownBy(() -> validator().assertTrue(invalidCondition, () -> "Dynamic: " + message))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Dynamic: " + message);
 
@@ -39,13 +44,14 @@ class ValidatorTest {
     ValidCheck.require().assertFalse(invalidCondition, message);
 
     // When & Then - Test assertFalse with string message (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().assertFalse(validCondition, message))
+
+    assertThatThrownBy(() -> validator().assertFalse(validCondition, message))
         .isInstanceOf(ValidationException.class)
         .hasMessage(message);
 
     // When & Then - Test assertFalse with supplier message (invalid)
-    assertThatThrownBy(
-            () -> ValidCheck.require().assertFalse(validCondition, () -> "Supplier: " + message))
+
+    assertThatThrownBy(() -> validator().assertFalse(validCondition, () -> "Supplier: " + message))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Supplier: " + message);
   }
@@ -61,17 +67,20 @@ class ValidatorTest {
     ValidCheck.require().notNull(validValue, paramName);
 
     // When & Then - Test notNull with name (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().notNull(nullValue, paramName))
+
+    assertThatThrownBy(() -> validator().notNull(nullValue, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'testParam' must not be null");
 
     // When & Then - Test notNull with supplier (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().notNull(nullValue, () -> "Custom null message"))
+
+    assertThatThrownBy(() -> validator().notNull(nullValue, () -> "Custom null message"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Custom null message");
 
     // When & Then - Test notNull without name (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().notNull(nullValue))
+
+    assertThatThrownBy(() -> validator().notNull(nullValue))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null");
   }
@@ -89,25 +98,26 @@ class ValidatorTest {
     ValidCheck.require().inRange(validValue, min, max, paramName);
 
     // When & Then - Test inRange with name (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().inRange(invalidValue, min, max, paramName))
+
+    assertThatThrownBy(() -> validator().inRange(invalidValue, min, max, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'number' must be between 1 and 10");
 
     // When & Then - Test inRange with supplier (invalid)
     assertThatThrownBy(
-            () ->
-                ValidCheck.require()
-                    .inRange(invalidValue, min, max, () -> "Range validation failed"))
+            () -> validator().inRange(invalidValue, min, max, () -> "Range validation failed"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Range validation failed");
 
     // When & Then - Test inRange without name (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().inRange(invalidValue, min, max))
+
+    assertThatThrownBy(() -> validator().inRange(invalidValue, min, max))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be between 1 and 10");
 
     // When & Then - Test IllegalArgumentException for null min/max
-    assertThatThrownBy(() -> ValidCheck.require().inRange(validValue, null, max, paramName))
+
+    assertThatThrownBy(() -> validator().inRange(validValue, null, max, paramName))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("min and max cannot be null");
   }
@@ -124,23 +134,26 @@ class ValidatorTest {
     ValidCheck.require().notEmpty(validString, paramName);
 
     // When & Then - Test string notEmpty with name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyString, paramName))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyString, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'stringParam' must not be null or empty");
 
     // When & Then - Test string notEmpty with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullString, paramName))
+
+    assertThatThrownBy(() -> validator().notEmpty(nullString, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'stringParam' must not be null or empty");
 
     // When & Then - Test string notEmpty with supplier (empty)
-    assertThatThrownBy(
-            () -> ValidCheck.require().notEmpty(emptyString, () -> "String cannot be empty"))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyString, () -> "String cannot be empty"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("String cannot be empty");
 
     // When & Then - Test string notEmpty without name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyString))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyString))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
   }
@@ -157,23 +170,26 @@ class ValidatorTest {
     ValidCheck.require().notEmpty(validCollection, paramName);
 
     // When & Then - Test collection notEmpty with name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyCollection, paramName))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyCollection, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'collection' must not be null or empty");
 
     // When & Then - Test collection notEmpty with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullCollection, paramName))
+
+    assertThatThrownBy(() -> validator().notEmpty(nullCollection, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'collection' must not be null or empty");
 
     // When & Then - Test collection notEmpty with supplier (empty)
-    assertThatThrownBy(
-            () -> ValidCheck.require().notEmpty(emptyCollection, () -> "Collection is required"))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyCollection, () -> "Collection is required"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Collection is required");
 
     // When & Then - Test collection notEmpty without name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyCollection))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyCollection))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
   }
@@ -190,22 +206,26 @@ class ValidatorTest {
     ValidCheck.require().notEmpty(validMap, paramName);
 
     // When & Then - Test map notEmpty with name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyMap, paramName))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyMap, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'mapParam' must not be null or empty");
 
     // When & Then - Test map notEmpty with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullMap, paramName))
+
+    assertThatThrownBy(() -> validator().notEmpty(nullMap, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'mapParam' must not be null or empty");
 
     // When & Then - Test map notEmpty with supplier (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyMap, () -> "Map cannot be empty"))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyMap, () -> "Map cannot be empty"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Map cannot be empty");
 
     // When & Then - Test map notEmpty without name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(emptyMap))
+
+    assertThatThrownBy(() -> validator().notEmpty(emptyMap))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
   }
@@ -223,28 +243,32 @@ class ValidatorTest {
     ValidCheck.require().notBlank(validString, paramName);
 
     // When & Then - Test notBlank with name (blank)
-    assertThatThrownBy(() -> ValidCheck.require().notBlank(blankString, paramName))
+
+    assertThatThrownBy(() -> validator().notBlank(blankString, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'text' must not be blank");
 
     // When & Then - Test notBlank with name (empty)
-    assertThatThrownBy(() -> ValidCheck.require().notBlank(emptyString, paramName))
+
+    assertThatThrownBy(() -> validator().notBlank(emptyString, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'text' must not be blank");
 
     // When & Then - Test notBlank with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().notBlank(nullString, paramName))
+
+    assertThatThrownBy(() -> validator().notBlank(nullString, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'text' must not be blank");
 
     // When & Then - Test notBlank with supplier (blank)
-    assertThatThrownBy(
-            () -> ValidCheck.require().notBlank(blankString, () -> "Text cannot be blank"))
+
+    assertThatThrownBy(() -> validator().notBlank(blankString, () -> "Text cannot be blank"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Text cannot be blank");
 
     // When & Then - Test notBlank without name (blank)
-    assertThatThrownBy(() -> ValidCheck.require().notBlank(blankString))
+
+    assertThatThrownBy(() -> validator().notBlank(blankString))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be blank");
   }
@@ -264,38 +288,38 @@ class ValidatorTest {
     ValidCheck.require().hasLength(validString, minLength, maxLength, paramName);
 
     // When & Then - Test hasLength with name (too short)
-    assertThatThrownBy(
-            () -> ValidCheck.require().hasLength(shortString, minLength, maxLength, paramName))
+
+    assertThatThrownBy(() -> validator().hasLength(shortString, minLength, maxLength, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'password' must have length between 5 and 20");
 
     // When & Then - Test hasLength with name (too long)
-    assertThatThrownBy(
-            () -> ValidCheck.require().hasLength(longString, minLength, maxLength, paramName))
+
+    assertThatThrownBy(() -> validator().hasLength(longString, minLength, maxLength, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'password' must have length between 5 and 20");
 
     // When & Then - Test hasLength with name (null)
-    assertThatThrownBy(
-            () -> ValidCheck.require().hasLength(nullString, minLength, maxLength, paramName))
+
+    assertThatThrownBy(() -> validator().hasLength(nullString, minLength, maxLength, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'password' must have length between 5 and 20");
 
     // When & Then - Test hasLength with supplier (short)
     assertThatThrownBy(
-            () ->
-                ValidCheck.require()
-                    .hasLength(shortString, minLength, maxLength, () -> "Invalid length"))
+            () -> validator().hasLength(shortString, minLength, maxLength, () -> "Invalid length"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Invalid length");
 
     // When & Then - Test hasLength without name (long)
-    assertThatThrownBy(() -> ValidCheck.require().hasLength(longString, minLength, maxLength))
+
+    assertThatThrownBy(() -> validator().hasLength(longString, minLength, maxLength))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must have length between 5 and 20");
 
     // When & Then - Test IllegalArgumentException for invalid range
-    assertThatThrownBy(() -> ValidCheck.require().hasLength(validString, 10, 5, paramName))
+
+    assertThatThrownBy(() -> validator().hasLength(validString, 10, 5, paramName))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minLength cannot be greater than maxLength");
   }
@@ -315,38 +339,38 @@ class ValidatorTest {
     ValidCheck.require().hasSize(validCollection, minSize, maxSize, paramName);
 
     // When & Then - Test hasSize with name (too small)
-    assertThatThrownBy(
-            () -> ValidCheck.require().hasSize(smallCollection, minSize, maxSize, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(smallCollection, minSize, maxSize, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'items' must have size between 2 and 5");
 
     // When & Then - Test hasSize with name (too large)
-    assertThatThrownBy(
-            () -> ValidCheck.require().hasSize(largeCollection, minSize, maxSize, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(largeCollection, minSize, maxSize, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'items' must have size between 2 and 5");
 
     // When & Then - Test hasSize with name (null)
-    assertThatThrownBy(
-            () -> ValidCheck.require().hasSize(nullCollection, minSize, maxSize, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(nullCollection, minSize, maxSize, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'items' must have size between 2 and 5");
 
     // When & Then - Test hasSize with supplier (small)
     assertThatThrownBy(
-            () ->
-                ValidCheck.require()
-                    .hasSize(smallCollection, minSize, maxSize, () -> "Invalid size"))
+            () -> validator().hasSize(smallCollection, minSize, maxSize, () -> "Invalid size"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Invalid size");
 
     // When & Then - Test hasSize without name (large)
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(largeCollection, minSize, maxSize))
+
+    assertThatThrownBy(() -> validator().hasSize(largeCollection, minSize, maxSize))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must have size between 2 and 5");
 
     // When & Then - Test IllegalArgumentException for invalid range
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(validCollection, 10, 5, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(validCollection, 10, 5, paramName))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minSize cannot be greater than maxSize");
   }
@@ -367,34 +391,38 @@ class ValidatorTest {
     ValidCheck.require().hasSize(validMap, minSize, maxSize, paramName);
 
     // When & Then - Test hasSize with name (too small)
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(smallMap, minSize, maxSize, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(smallMap, minSize, maxSize, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'config' must have size between 2 and 5");
 
     // When & Then - Test hasSize with name (too large)
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(largeMap, minSize, maxSize, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(largeMap, minSize, maxSize, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'config' must have size between 2 and 5");
 
     // When & Then - Test hasSize with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(nullMap, minSize, maxSize, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(nullMap, minSize, maxSize, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'config' must have size between 2 and 5");
 
     // When & Then - Test hasSize with supplier (small)
     assertThatThrownBy(
-            () ->
-                ValidCheck.require().hasSize(smallMap, minSize, maxSize, () -> "Invalid map size"))
+            () -> validator().hasSize(smallMap, minSize, maxSize, () -> "Invalid map size"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Invalid map size");
 
     // When & Then - Test hasSize without name (large)
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(largeMap, minSize, maxSize))
+
+    assertThatThrownBy(() -> validator().hasSize(largeMap, minSize, maxSize))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must have size between 2 and 5");
 
     // When & Then - Test IllegalArgumentException for invalid range
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(validMap, 10, 5, paramName))
+
+    assertThatThrownBy(() -> validator().hasSize(validMap, 10, 5, paramName))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minSize cannot be greater than maxSize");
   }
@@ -412,27 +440,32 @@ class ValidatorTest {
     ValidCheck.require().isPositive(positiveValue, paramName);
 
     // When & Then - Test isPositive with name (zero)
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(zeroValue, paramName))
+
+    assertThatThrownBy(() -> validator().isPositive(zeroValue, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'amount' must be positive");
 
     // When & Then - Test isPositive with name (negative)
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(negativeValue, paramName))
+
+    assertThatThrownBy(() -> validator().isPositive(negativeValue, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'amount' must be positive");
 
     // When & Then - Test isPositive with name (null)
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(nullValue, paramName))
+
+    assertThatThrownBy(() -> validator().isPositive(nullValue, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'amount' must be positive");
 
     // When & Then - Test isPositive with supplier (zero)
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(zeroValue, () -> "Must be positive"))
+
+    assertThatThrownBy(() -> validator().isPositive(zeroValue, () -> "Must be positive"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Must be positive");
 
     // When & Then - Test isPositive without name (negative)
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(negativeValue))
+
+    assertThatThrownBy(() -> validator().isPositive(negativeValue))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be positive");
 
@@ -440,23 +473,26 @@ class ValidatorTest {
     ValidCheck.require().isNegative(negativeValue, paramName);
 
     // When & Then - Test isNegative with name (zero)
-    assertThatThrownBy(() -> ValidCheck.require().isNegative(zeroValue, paramName))
+
+    assertThatThrownBy(() -> validator().isNegative(zeroValue, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'amount' must be negative");
 
     // When & Then - Test isNegative with name (positive)
-    assertThatThrownBy(() -> ValidCheck.require().isNegative(positiveValue, paramName))
+
+    assertThatThrownBy(() -> validator().isNegative(positiveValue, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'amount' must be negative");
 
     // When & Then - Test isNegative with supplier (positive)
-    assertThatThrownBy(
-            () -> ValidCheck.require().isNegative(positiveValue, () -> "Must be negative"))
+
+    assertThatThrownBy(() -> validator().isNegative(positiveValue, () -> "Must be negative"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Must be negative");
 
     // When & Then - Test isNegative without name (positive)
-    assertThatThrownBy(() -> ValidCheck.require().isNegative(positiveValue))
+
+    assertThatThrownBy(() -> validator().isNegative(positiveValue))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be negative");
   }
@@ -474,28 +510,32 @@ class ValidatorTest {
     ValidCheck.require().matches(validEmail, emailRegex, paramName);
 
     // When & Then - Test matches string regex with name (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().matches(invalidEmail, emailRegex, paramName))
+
+    assertThatThrownBy(() -> validator().matches(invalidEmail, emailRegex, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'email' must match pattern");
 
     // When & Then - Test matches string regex with name (null value)
-    assertThatThrownBy(() -> ValidCheck.require().matches(nullValue, emailRegex, paramName))
+
+    assertThatThrownBy(() -> validator().matches(nullValue, emailRegex, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'email' must match pattern");
 
     // When & Then - Test matches string regex with supplier (invalid)
-    assertThatThrownBy(
-            () -> ValidCheck.require().matches(invalidEmail, emailRegex, () -> "Invalid format"))
+
+    assertThatThrownBy(() -> validator().matches(invalidEmail, emailRegex, () -> "Invalid format"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Invalid format");
 
     // When & Then - Test matches string regex without name (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().matches(invalidEmail, emailRegex))
+
+    assertThatThrownBy(() -> validator().matches(invalidEmail, emailRegex))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must match pattern");
 
     // When & Then - Test IllegalArgumentException for null regex
-    assertThatThrownBy(() -> ValidCheck.require().matches(validEmail, (String) null, paramName))
+
+    assertThatThrownBy(() -> validator().matches(validEmail, (String) null, paramName))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("regex pattern cannot be null");
   }
@@ -513,31 +553,32 @@ class ValidatorTest {
     ValidCheck.require().matches(validInput, uppercasePattern, paramName);
 
     // When & Then - Test matches Pattern with name (invalid)
-    assertThatThrownBy(
-            () -> ValidCheck.require().matches(invalidInput, uppercasePattern, paramName))
+
+    assertThatThrownBy(() -> validator().matches(invalidInput, uppercasePattern, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'code' must match pattern");
 
     // When & Then - Test matches Pattern with name (null value)
-    assertThatThrownBy(() -> ValidCheck.require().matches(nullValue, uppercasePattern, paramName))
+
+    assertThatThrownBy(() -> validator().matches(nullValue, uppercasePattern, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'code' must match pattern");
 
     // When & Then - Test matches Pattern with supplier (invalid)
     assertThatThrownBy(
-            () ->
-                ValidCheck.require()
-                    .matches(invalidInput, uppercasePattern, () -> "Must be uppercase"))
+            () -> validator().matches(invalidInput, uppercasePattern, () -> "Must be uppercase"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Must be uppercase");
 
     // When & Then - Test matches Pattern without name (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().matches(invalidInput, uppercasePattern))
+
+    assertThatThrownBy(() -> validator().matches(invalidInput, uppercasePattern))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must match pattern");
 
     // When & Then - Test IllegalArgumentException for null Pattern
-    assertThatThrownBy(() -> ValidCheck.require().matches(validInput, (Pattern) null, paramName))
+
+    assertThatThrownBy(() -> validator().matches(validInput, (Pattern) null, paramName))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("regex pattern cannot be null");
   }
@@ -553,44 +594,44 @@ class ValidatorTest {
     String invalidPattern = "123";
 
     // When & Then - Test parameter-less overloads that delegate to named versions
-    assertThatThrownBy(() -> ValidCheck.require().inRange(outOfRange, 1, 10))
+
+    assertThatThrownBy(() -> validator().inRange(outOfRange, 1, 10))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be between 1 and 10");
 
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(nullString))
+    assertThatThrownBy(() -> validator().notEmpty(nullString))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
 
-    assertThatThrownBy(() -> ValidCheck.require().notEmpty(List.of()))
+    assertThatThrownBy(() -> validator().notEmpty(List.of()))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be null or empty");
 
-    assertThatThrownBy(() -> ValidCheck.require().notBlank(nullString))
+    assertThatThrownBy(() -> validator().notBlank(nullString))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must not be blank");
 
-    assertThatThrownBy(() -> ValidCheck.require().hasLength(longString, 1, 100))
+    assertThatThrownBy(() -> validator().hasLength(longString, 1, 100))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must have length between 1 and 100");
 
-    assertThatThrownBy(() -> ValidCheck.require().hasSize(smallList, 2, 5))
+    assertThatThrownBy(() -> validator().hasSize(smallList, 2, 5))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must have size between 2 and 5");
 
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(negativeNumber))
+    assertThatThrownBy(() -> validator().isPositive(negativeNumber))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be positive");
 
-    assertThatThrownBy(() -> ValidCheck.require().isNegative(-negativeNumber))
+    assertThatThrownBy(() -> validator().isNegative(-negativeNumber))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be negative");
 
-    assertThatThrownBy(() -> ValidCheck.require().matches(invalidPattern, "^[a-z]+$"))
+    assertThatThrownBy(() -> validator().matches(invalidPattern, "^[a-z]+$"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must match pattern");
 
-    assertThatThrownBy(
-            () -> ValidCheck.require().matches(invalidPattern, Pattern.compile("^[a-z]+$")))
+    assertThatThrownBy(() -> validator().matches(invalidPattern, Pattern.compile("^[a-z]+$")))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must match pattern");
   }
@@ -606,11 +647,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrInRange(1.5, 1.0, 10.0, "score");
 
     // Test nullOrInRange - invalid values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(15, 1, 10, "age"))
+
+    assertThatThrownBy(() -> validator().nullOrInRange(15, 1, 10, "age"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'age' must be null or between 1 and 10");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(-5, 1, 10))
+    assertThatThrownBy(() -> validator().nullOrInRange(-5, 1, 10))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or between 1 and 10");
 
@@ -623,11 +665,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrNotEmpty("world");
 
     // Test nullOrNotEmpty (String) - empty values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty("", "description"))
+
+    assertThatThrownBy(() -> validator().nullOrNotEmpty("", "description"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'description' must be null or not empty");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty(""))
+    assertThatThrownBy(() -> validator().nullOrNotEmpty(""))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or not empty");
 
@@ -640,7 +683,8 @@ class ValidatorTest {
     ValidCheck.require().nullOrNotEmpty(List.of("item"));
 
     // Test nullOrNotEmpty (Collection) - empty values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty(List.of(), "tags"))
+
+    assertThatThrownBy(() -> validator().nullOrNotEmpty(List.of(), "tags"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'tags' must be null or not empty");
 
@@ -653,7 +697,8 @@ class ValidatorTest {
     ValidCheck.require().nullOrNotEmpty(Map.of("a", "b"));
 
     // Test nullOrNotEmpty (Map) - empty values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrNotEmpty(Map.of(), "config"))
+
+    assertThatThrownBy(() -> validator().nullOrNotEmpty(Map.of(), "config"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'config' must be null or not empty");
 
@@ -666,11 +711,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrNotBlank("world");
 
     // Test nullOrNotBlank - blank values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrNotBlank("   ", "bio"))
+
+    assertThatThrownBy(() -> validator().nullOrNotBlank("   ", "bio"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'bio' must be null or not blank");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrNotBlank(""))
+    assertThatThrownBy(() -> validator().nullOrNotBlank(""))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or not blank");
 
@@ -683,11 +729,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrHasLength("world", 1, 20);
 
     // Test nullOrHasLength - invalid lengths should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasLength("hi", 5, 20, "username"))
+
+    assertThatThrownBy(() -> validator().nullOrHasLength("hi", 5, 20, "username"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'username' must be null or have length between 5 and 20");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasLength("verylongstring", 1, 10))
+    assertThatThrownBy(() -> validator().nullOrHasLength("verylongstring", 1, 10))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or have length between 1 and 10");
 
@@ -700,11 +747,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrHasSize(List.of("x"), 1, 3);
 
     // Test nullOrHasSize - invalid sizes should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of("a"), 2, 5, "items"))
+
+    assertThatThrownBy(() -> validator().nullOrHasSize(List.of("a"), 2, 5, "items"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'items' must be null or have size between 2 and 5");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of("a", "b", "c", "d"), 1, 3))
+    assertThatThrownBy(() -> validator().nullOrHasSize(List.of("a", "b", "c", "d"), 1, 3))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or have size between 1 and 3");
 
@@ -717,14 +765,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrHasSize(Map.of("x", "1"), 1, 3);
 
     // Test nullOrHasSize (Map) - invalid sizes should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(Map.of("a", "1"), 2, 5, "config"))
+
+    assertThatThrownBy(() -> validator().nullOrHasSize(Map.of("a", "1"), 2, 5, "config"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'config' must be null or have size between 2 and 5");
-
     assertThatThrownBy(
-            () ->
-                ValidCheck.require()
-                    .nullOrHasSize(Map.of("a", "1", "b", "2", "c", "3", "d", "4"), 1, 3))
+            () -> validator().nullOrHasSize(Map.of("a", "1", "b", "2", "c", "3", "d", "4"), 1, 3))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or have size between 1 and 3");
 
@@ -737,11 +783,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrIsPositive(3.14);
 
     // Test nullOrIsPositive - non-positive values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsPositive(0, "amount"))
+
+    assertThatThrownBy(() -> validator().nullOrIsPositive(0, "amount"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'amount' must be null or positive");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsPositive(-5))
+    assertThatThrownBy(() -> validator().nullOrIsPositive(-5))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or positive");
 
@@ -754,11 +801,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrIsNegative(-3.14);
 
     // Test nullOrIsNegative - non-negative values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNegative(0, "deficit"))
+
+    assertThatThrownBy(() -> validator().nullOrIsNegative(0, "deficit"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'deficit' must be null or negative");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNegative(5))
+    assertThatThrownBy(() -> validator().nullOrIsNegative(5))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or negative");
 
@@ -771,11 +819,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrMatches("123", "^\\d+$");
 
     // Test nullOrMatches (String regex) - non-matching values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("Hello", "^[a-z]+$", "code"))
+
+    assertThatThrownBy(() -> validator().nullOrMatches("Hello", "^[a-z]+$", "code"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'code' must be null or match pattern '^[a-z]+$'");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("abc", "^\\d+$"))
+    assertThatThrownBy(() -> validator().nullOrMatches("abc", "^\\d+$"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or match pattern '^\\d+$'");
 
@@ -789,11 +838,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrMatches("WORLD", pattern);
 
     // Test nullOrMatches (Pattern regex) - non-matching values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("hello", pattern, "name"))
+
+    assertThatThrownBy(() -> validator().nullOrMatches("hello", pattern, "name"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'name' must be null or match pattern '^[A-Z]+$'");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("world", pattern))
+    assertThatThrownBy(() -> validator().nullOrMatches("world", pattern))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or match pattern '^[A-Z]+$'");
   }
@@ -801,35 +851,40 @@ class ValidatorTest {
   @Test
   void nullOrConditionalValidationMethodsWithInvalidArguments() {
     // Test nullOrInRange with null min/max
-    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(5, null, 10, "value"))
+
+    assertThatThrownBy(() -> validator().nullOrInRange(5, null, 10, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("min and max cannot be null");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrInRange(5, 1, null, "value"))
+    assertThatThrownBy(() -> validator().nullOrInRange(5, 1, null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("min and max cannot be null");
 
     // Test nullOrHasLength with invalid range
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasLength("test", 10, 5, "value"))
+
+    assertThatThrownBy(() -> validator().nullOrHasLength("test", 10, 5, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minLength cannot be greater than maxLength");
 
     // Test nullOrHasSize with invalid range
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(List.of(), 5, 2, "value"))
+
+    assertThatThrownBy(() -> validator().nullOrHasSize(List.of(), 5, 2, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minSize cannot be greater than maxSize");
 
     // Test nullOrHasSize (Map) with invalid range
-    assertThatThrownBy(() -> ValidCheck.require().nullOrHasSize(Map.of(), 5, 2, "value"))
+
+    assertThatThrownBy(() -> validator().nullOrHasSize(Map.of(), 5, 2, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minSize cannot be greater than maxSize");
 
     // Test nullOrMatches with null regex
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("test", (String) null, "value"))
+
+    assertThatThrownBy(() -> validator().nullOrMatches("test", (String) null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("regex pattern cannot be null");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMatches("test", (Pattern) null, "value"))
+    assertThatThrownBy(() -> validator().nullOrMatches("test", (Pattern) null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("regex pattern cannot be null");
   }
@@ -843,21 +898,24 @@ class ValidatorTest {
     ValidCheck.require().isNonNegative(3.14);
 
     // Test isNonNegative - negative values should fail
-    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-1, "value"))
+
+    assertThatThrownBy(() -> validator().isNonNegative(-1, "value"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'value' must be non-negative");
 
-    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-0.1))
+    assertThatThrownBy(() -> validator().isNonNegative(-0.1))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be non-negative");
 
     // Test isNonNegative - null values should fail
-    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(null, "value"))
+
+    assertThatThrownBy(() -> validator().isNonNegative(null, "value"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'value' must be non-negative");
 
     // When & Then - Test isNonNegative with supplier (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-1, () -> "Value must be >= 0"))
+
+    assertThatThrownBy(() -> validator().isNonNegative(-1, () -> "Value must be >= 0"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Value must be >= 0");
 
@@ -868,21 +926,24 @@ class ValidatorTest {
     ValidCheck.require().isNonPositive(-3.14);
 
     // Test isNonPositive - positive values should fail
-    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(1, "value"))
+
+    assertThatThrownBy(() -> validator().isNonPositive(1, "value"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'value' must be non-positive");
 
-    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(0.1))
+    assertThatThrownBy(() -> validator().isNonPositive(0.1))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be non-positive");
 
     // Test isNonPositive - null values should fail
-    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(null, "value"))
+
+    assertThatThrownBy(() -> validator().isNonPositive(null, "value"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'value' must be non-positive");
 
     // When & Then - Test isNonPositive with supplier (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(1, () -> "Value must be <= 0"))
+
+    assertThatThrownBy(() -> validator().isNonPositive(1, () -> "Value must be <= 0"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Value must be <= 0");
   }
@@ -899,11 +960,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrIsNonNegative(3.14);
 
     // Test nullOrIsNonNegative - negative values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonNegative(-1, "amount"))
+
+    assertThatThrownBy(() -> validator().nullOrIsNonNegative(-1, "amount"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'amount' must be null or non-negative");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonNegative(-0.1))
+    assertThatThrownBy(() -> validator().nullOrIsNonNegative(-0.1))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or non-negative");
 
@@ -917,11 +979,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrIsNonPositive(-3.14);
 
     // Test nullOrIsNonPositive - positive values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonPositive(1, "deficit"))
+
+    assertThatThrownBy(() -> validator().nullOrIsNonPositive(1, "deficit"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'deficit' must be null or non-positive");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrIsNonPositive(0.1))
+    assertThatThrownBy(() -> validator().nullOrIsNonPositive(0.1))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or non-positive");
   }
@@ -931,27 +994,33 @@ class ValidatorTest {
     // Demonstrate the semantic differences between the sign validation methods
 
     // Value: -1
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(-1)) // > 0, fails
+
+    assertThatThrownBy(() -> validator().isPositive(-1)) // > 0, fails
         .isInstanceOf(ValidationException.class);
-    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-1)) // >= 0, fails
+
+    assertThatThrownBy(() -> validator().isNonNegative(-1)) // >= 0, fails
         .isInstanceOf(ValidationException.class);
     ValidCheck.require().isNegative(-1); // < 0, passes
     ValidCheck.require().isNonPositive(-1); // <= 0, passes
 
     // Value: 0
-    assertThatThrownBy(() -> ValidCheck.require().isPositive(0)) // > 0, fails
+
+    assertThatThrownBy(() -> validator().isPositive(0)) // > 0, fails
         .isInstanceOf(ValidationException.class);
     ValidCheck.require().isNonNegative(0); // >= 0, passes
-    assertThatThrownBy(() -> ValidCheck.require().isNegative(0)) // < 0, fails
+
+    assertThatThrownBy(() -> validator().isNegative(0)) // < 0, fails
         .isInstanceOf(ValidationException.class);
     ValidCheck.require().isNonPositive(0); // <= 0, passes
 
     // Value: 1
     ValidCheck.require().isPositive(1); // > 0, passes
     ValidCheck.require().isNonNegative(1); // >= 0, passes
-    assertThatThrownBy(() -> ValidCheck.require().isNegative(1)) // < 0, fails
+
+    assertThatThrownBy(() -> validator().isNegative(1)) // < 0, fails
         .isInstanceOf(ValidationException.class);
-    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(1)) // <= 0, fails
+
+    assertThatThrownBy(() -> validator().isNonPositive(1)) // <= 0, fails
         .isInstanceOf(ValidationException.class);
   }
 
@@ -963,16 +1032,18 @@ class ValidatorTest {
     ValidCheck.require().min(100.5, 50.0, "score");
 
     // Test min() - invalid values should fail
-    assertThatThrownBy(() -> ValidCheck.require().min(17, 18, "age"))
+
+    assertThatThrownBy(() -> validator().min(17, 18, "age"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'age' must be at least 18");
 
-    assertThatThrownBy(() -> ValidCheck.require().min(10, 18))
+    assertThatThrownBy(() -> validator().min(10, 18))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be at least 18");
 
     // Test min() - null values should fail
-    assertThatThrownBy(() -> ValidCheck.require().min(null, 18, "age"))
+
+    assertThatThrownBy(() -> validator().min(null, 18, "age"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'age' must be at least 18");
 
@@ -982,26 +1053,30 @@ class ValidatorTest {
     ValidCheck.require().max(4.5, 10.0, "rating");
 
     // Test max() - invalid values should fail
-    assertThatThrownBy(() -> ValidCheck.require().max(101, 100, "percentage"))
+
+    assertThatThrownBy(() -> validator().max(101, 100, "percentage"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'percentage' must be at most 100");
 
-    assertThatThrownBy(() -> ValidCheck.require().max(150, 100))
+    assertThatThrownBy(() -> validator().max(150, 100))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be at most 100");
 
     // Test max() - null values should fail
-    assertThatThrownBy(() -> ValidCheck.require().max(null, 100, "percentage"))
+
+    assertThatThrownBy(() -> validator().max(null, 100, "percentage"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'percentage' must be at most 100");
 
     // When & Then - Test min with supplier (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().min(17, 18, () -> "Age must be at least 18"))
+
+    assertThatThrownBy(() -> validator().min(17, 18, () -> "Age must be at least 18"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Age must be at least 18");
 
     // When & Then - Test max with supplier (invalid)
-    assertThatThrownBy(() -> ValidCheck.require().max(101, 100, () -> "Cannot exceed 100"))
+
+    assertThatThrownBy(() -> validator().max(101, 100, () -> "Cannot exceed 100"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Cannot exceed 100");
   }
@@ -1018,11 +1093,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrMin(100.5, 50.0, "score");
 
     // Test nullOrMin() - invalid values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMin(17, 18, "age"))
+
+    assertThatThrownBy(() -> validator().nullOrMin(17, 18, "age"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'age' must be null or at least 18");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMin(10, 18))
+    assertThatThrownBy(() -> validator().nullOrMin(10, 18))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or at least 18");
 
@@ -1036,11 +1112,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrMax(4.5, 10.0, "rating");
 
     // Test nullOrMax() - invalid values should fail
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(101, 100, "percentage"))
+
+    assertThatThrownBy(() -> validator().nullOrMax(101, 100, "percentage"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'percentage' must be null or at most 100");
 
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(150, 100))
+    assertThatThrownBy(() -> validator().nullOrMax(150, 100))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null or at most 100");
   }
@@ -1048,22 +1125,26 @@ class ValidatorTest {
   @Test
   void minMaxMethodsWithInvalidArguments() {
     // Test min() with null minValue
-    assertThatThrownBy(() -> ValidCheck.require().min(5, null, "value"))
+
+    assertThatThrownBy(() -> validator().min(5, null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minValue cannot be null");
 
     // Test max() with null maxValue
-    assertThatThrownBy(() -> ValidCheck.require().max(5, null, "value"))
+
+    assertThatThrownBy(() -> validator().max(5, null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("maxValue cannot be null");
 
     // Test nullOrMin() with null minValue
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMin(5, null, "value"))
+
+    assertThatThrownBy(() -> validator().nullOrMin(5, null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("minValue cannot be null");
 
     // Test nullOrMax() with null maxValue
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(5, null, "value"))
+
+    assertThatThrownBy(() -> validator().nullOrMax(5, null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("maxValue cannot be null");
   }
@@ -1085,11 +1166,12 @@ class ValidatorTest {
     ValidCheck.require().nullOrMax(null, 100, "age");
 
     // Error messages are more specific
-    assertThatThrownBy(() -> ValidCheck.require().min(10, 18, "age"))
+
+    assertThatThrownBy(() -> validator().min(10, 18, "age"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("must be at least 18"); // Focused message
 
-    assertThatThrownBy(() -> ValidCheck.require().max(150, 100, "percentage"))
+    assertThatThrownBy(() -> validator().max(150, 100, "percentage"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("must be at most 100"); // Focused message
   }
@@ -1105,17 +1187,20 @@ class ValidatorTest {
     ValidCheck.require().isNull(nullValue, paramName);
 
     // When & Then - Test isNull with name (invalid - non-null value)
-    assertThatThrownBy(() -> ValidCheck.require().isNull(nonNullValue, paramName))
+
+    assertThatThrownBy(() -> validator().isNull(nonNullValue, paramName))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'testParam' must be null");
 
     // When & Then - Test isNull with supplier (invalid - non-null value)
-    assertThatThrownBy(() -> ValidCheck.require().isNull(nonNullValue, () -> "Custom null message"))
+
+    assertThatThrownBy(() -> validator().isNull(nonNullValue, () -> "Custom null message"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Custom null message");
 
     // When & Then - Test isNull without name (invalid - non-null value)
-    assertThatThrownBy(() -> ValidCheck.require().isNull(nonNullValue))
+
+    assertThatThrownBy(() -> validator().isNull(nonNullValue))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null");
   }
@@ -1128,16 +1213,18 @@ class ValidatorTest {
         .hasMessage("'test' must not be null"); // Should not include value
 
     // Test inRange with null parameters (covers missed branches in inRange)
-    assertThatThrownBy(() -> ValidCheck.require().inRange(5, null, 10, "value"))
+
+    assertThatThrownBy(() -> validator().inRange(5, null, 10, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("min and max cannot be null");
 
-    assertThatThrownBy(() -> ValidCheck.require().inRange(5, 0, null, "value"))
+    assertThatThrownBy(() -> validator().inRange(5, 0, null, "value"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("min and max cannot be null");
 
     // Test isNegative with edge cases (covers missed branch in isNegative)
-    assertThatThrownBy(() -> ValidCheck.require().isNegative(null, () -> "custom null message"))
+
+    assertThatThrownBy(() -> validator().isNegative(null, () -> "custom null message"))
         .hasMessage("custom null message");
 
     // Test edge case where value is exactly at boundary for inRange
@@ -1145,7 +1232,8 @@ class ValidatorTest {
     ValidCheck.require().inRange(10, 1, 10, "value"); // Max boundary
 
     // Test formatMessage with null name (covers missed branch in formatMessage)
-    assertThatThrownBy(() -> ValidCheck.require().notNull(null, (String) null))
+
+    assertThatThrownBy(() -> validator().notNull(null, (String) null))
         .hasMessage("parameter must not be null"); // Should use "parameter" when name is null
   }
 
@@ -1188,7 +1276,10 @@ class ValidatorTest {
                                 .collect(Collectors.toList()))));
 
     // When & Then - Verify custom formatting with multiple errors
-    assertThatThrownBy(() -> validator.notNull(null, "field1").isPositive(-5, "field2").validate())
+    assertThatThrownBy(
+            () -> {
+              validator.notNull(null, "field1").isPositive(-5, "field2").validate();
+            })
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Errors:\n- ")
         .hasMessageContaining("'field1' must not be null")
@@ -1204,25 +1295,28 @@ class ValidatorTest {
     Integer tooLarge = 150;
 
     // When & Then - Test nullOrInRange with supplier
+
     assertThatThrownBy(
-            () -> ValidCheck.require().nullOrInRange(outOfRange, 1, 10, () -> "Value out of range"))
+            () -> validator().nullOrInRange(outOfRange, 1, 10, () -> "Value out of range"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Value out of range");
 
     // When & Then - Test nullOrNotEmpty with supplier
+
     assertThatThrownBy(
-            () -> ValidCheck.require().nullOrNotEmpty(emptyString, () -> "String cannot be empty"))
+            () -> validator().nullOrNotEmpty(emptyString, () -> "String cannot be empty"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("String cannot be empty");
 
     // When & Then - Test nullOrMin with supplier
-    assertThatThrownBy(
-            () -> ValidCheck.require().nullOrMin(tooSmall, 18, () -> "Minimum age is 18"))
+
+    assertThatThrownBy(() -> validator().nullOrMin(tooSmall, 18, () -> "Minimum age is 18"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Minimum age is 18");
 
     // When & Then - Test nullOrMax with supplier
-    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(tooLarge, 100, () -> "Maximum is 100"))
+
+    assertThatThrownBy(() -> validator().nullOrMax(tooLarge, 100, () -> "Maximum is 100"))
         .isInstanceOf(ValidationException.class)
         .hasMessage("Maximum is 100");
   }

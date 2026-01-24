@@ -64,7 +64,7 @@ public class ValidationExceptionTest {
     assertThat(error2.message()).isEqualTo("general error");
 
     // When & Then - Test hashCode
-    assertThat(error1.hashCode()).isEqualTo(error3.hashCode());
-    assertThat(error1.hashCode()).isNotEqualTo(error2.hashCode());
+    assertThat(error1).hasSameHashCodeAs(error3);
+    assertThat(error1).doesNotHaveSameHashCodeAs(error2);
   }
 }
