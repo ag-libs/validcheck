@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Base class for parameter validation with configurable behavior and fluent API. This class is
@@ -105,6 +106,10 @@ public class Validator {
   private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
   private static final int MAX_DISPLAYED_VALUE_LENGTH = 100;
 
+  // Error message constants
+  private static final String MSG_NOT_NULL_OR_EMPTY = "must not be null or empty";
+  private static final String MSG_NULL_OR_NOT_EMPTY = "must be null or not empty";
+
   /** Whether to include actual values in error messages. */
   protected final boolean includeValues;
 
@@ -115,10 +120,11 @@ public class Validator {
   protected final boolean fillStackTrace;
 
   /** Factory for creating exceptions when validation fails. */
-  protected final java.util.function.Function<List<String>, RuntimeException> exceptionFactory;
+  protected final java.util.function.Function<List<ValidationError>, RuntimeException>
+      exceptionFactory;
 
   /** List of collected validation errors. */
-  protected final List<String> errors;
+  protected final List<ValidationError> errors;
 
   /**
    * Constructs a new Validator with the specified configuration.
@@ -134,7 +140,7 @@ public class Validator {
       boolean includeValues,
       boolean failFast,
       boolean fillStackTrace,
-      Function<List<String>, RuntimeException> exceptionFactory) {
+      Function<List<ValidationError>, RuntimeException> exceptionFactory) {
     this.includeValues = includeValues;
     this.failFast = failFast;
     this.fillStackTrace = fillStackTrace;
@@ -152,19 +158,23 @@ public class Validator {
     return string.substring(0, MAX_DISPLAYED_VALUE_LENGTH - 3) + "...";
   }
 
-  private String formatMessage(Object value, String name, String message, boolean includeValue) {
-    var paramName = name == null ? "parameter" : String.format("'%s'", name);
-    var error = String.format("%s %s", paramName, message);
+  private ValidationError createError(Supplier<String> messageSupplier) {
+    return new ValidationError(null, messageSupplier.get());
+  }
+
+  private ValidationError createError(
+      Object value, String name, String message, boolean includeValue) {
+    var error = name == null ? String.format("parameter %s", message) : message;
 
     if (this.includeValues && includeValue && value != null) {
       var stringValue = valueToString(value);
       var formattedValue =
           value instanceof String ? String.format("'%s'", stringValue) : stringValue;
       // limit the string length of string representation of the value
-      return error + String.format(", but it was %s", formattedValue);
+      return new ValidationError(name, error + String.format(", but it was %s", formattedValue));
     }
 
-    return error;
+    return new ValidationError(name, error);
   }
 
   /** Throws ValidationException if any errors have been collected. */
@@ -189,9 +199,14 @@ public class Validator {
     if (exceptionFactory != null) {
       return exceptionFactory.apply(Collections.unmodifiableList(errors));
     }
-    final var errorMessage = String.join("; ", errors);
+    final var errorMessage =
+        errors.stream().map(ValidationError::toString).collect(Collectors.joining("; "));
     return ValidationException.create(fillStackTrace, errorMessage, errors);
   }
+
+  // ========================================
+  // Assertion Methods
+  // ========================================
 
   /**
    * Validates that the specified condition is true.
@@ -216,14 +231,7 @@ public class Validator {
    *     condition is false and fail-fast is enabled
    */
   public Validator assertTrue(boolean condition, Supplier<String> messageSupplier) {
-    if (!condition) {
-      errors.add(messageSupplier.get());
-      if (failFast) {
-        validate();
-      }
-    }
-
-    return this;
+    return assertTrueInternal(condition, () -> createError(messageSupplier));
   }
 
   /**
@@ -252,6 +260,26 @@ public class Validator {
     return assertTrue(!condition, messageSupplier);
   }
 
+  private Validator assertTrueInternal(boolean condition, Supplier<ValidationError> errorSupplier) {
+    if (!condition) {
+      errors.add(errorSupplier.get());
+      if (failFast) {
+        validate();
+      }
+    }
+
+    return this;
+  }
+
+  private Validator assertFalseInternal(
+      boolean condition, Supplier<ValidationError> errorSupplier) {
+    return assertTrueInternal(!condition, errorSupplier);
+  }
+
+  // ========================================
+  // Null Checking Methods
+  // ========================================
+
   /**
    * Validates that the specified value is not null.
    *
@@ -262,7 +290,7 @@ public class Validator {
    *     value is null and fail-fast is enabled
    */
   public Validator notNull(Object value, String name) {
-    return notNull(value, () -> formatMessage(value, name, "must not be null", true));
+    return notNullInternal(value, () -> createError(value, name, "must not be null", true));
   }
 
   /**
@@ -275,7 +303,7 @@ public class Validator {
    *     value is null and fail-fast is enabled
    */
   public Validator notNull(Object value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null, messageSupplier);
+    return notNullInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -289,6 +317,56 @@ public class Validator {
   public Validator notNull(Object value) {
     return notNull(value, (String) null);
   }
+
+  private Validator notNullInternal(Object value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified value is null.
+   *
+   * @param value the value to check for null
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and fail-fast is enabled
+   */
+  public Validator isNull(Object value, String name) {
+    return isNullInternal(value, () -> createError(value, name, "must be null", true));
+  }
+
+  /**
+   * Validates that the specified value is null.
+   *
+   * @param value the value to check for null
+   * @param messageSupplier supplier for the error message if the value is not null
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and fail-fast is enabled
+   */
+  public Validator isNull(Object value, Supplier<String> messageSupplier) {
+    return isNullInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified value is null.
+   *
+   * @param value the value to check for null
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and fail-fast is enabled
+   */
+  public Validator isNull(Object value) {
+    return isNull(value, (String) null);
+  }
+
+  private Validator isNullInternal(Object value, Supplier<ValidationError> errorSupplier) {
+    return assertTrueInternal(value == null, errorSupplier);
+  }
+
+  // ========================================
+  // Range Validation Methods
+  // ========================================
 
   /**
    * Validates that the specified numeric value is within the given range (inclusive).
@@ -304,12 +382,11 @@ public class Validator {
    * @throws IllegalArgumentException if min or max are null
    */
   public <T extends Number> Validator inRange(T value, T min, T max, String name) {
-    return inRange(
+    return inRangeInternal(
         value,
         min,
         max,
-        () ->
-            formatMessage(value, name, String.format("must be between %s and %s", min, max), true));
+        () -> createError(value, name, String.format("must be between %s and %s", min, max), true));
   }
 
   /**
@@ -331,10 +408,7 @@ public class Validator {
       throw new IllegalArgumentException("min and max cannot be null");
     }
 
-    return assertFalse(
-        value == null
-            || (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
-        messageSupplier);
+    return inRangeInternal(value, min, max, () -> createError(messageSupplier));
   }
 
   /**
@@ -353,6 +427,18 @@ public class Validator {
     return inRange(value, min, max, (String) null);
   }
 
+  private <T extends Number> Validator inRangeInternal(
+      T value, T min, T max, Supplier<ValidationError> errorSupplier) {
+    if (min == null || max == null) {
+      throw new IllegalArgumentException("min and max cannot be null");
+    }
+
+    return assertFalseInternal(
+        value == null
+            || (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
+        errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is greater than or equal to the minimum value.
    *
@@ -366,10 +452,10 @@ public class Validator {
    * @throws IllegalArgumentException if minValue is null
    */
   public <T extends Number> Validator min(T value, T minValue, String name) {
-    return min(
+    return minInternal(
         value,
         minValue,
-        () -> formatMessage(value, name, String.format("must be at least %s", minValue), true));
+        () -> createError(value, name, String.format("must be at least %s", minValue), true));
   }
 
   /**
@@ -385,12 +471,7 @@ public class Validator {
    * @throws IllegalArgumentException if minValue is null
    */
   public <T extends Number> Validator min(T value, T minValue, Supplier<String> messageSupplier) {
-    if (minValue == null) {
-      throw new IllegalArgumentException("minValue cannot be null");
-    }
-
-    return assertFalse(
-        value == null || value.doubleValue() < minValue.doubleValue(), messageSupplier);
+    return minInternal(value, minValue, () -> createError(messageSupplier));
   }
 
   /**
@@ -408,6 +489,16 @@ public class Validator {
     return min(value, minValue, (String) null);
   }
 
+  private <T extends Number> Validator minInternal(
+      T value, T minValue, Supplier<ValidationError> errorSupplier) {
+    if (minValue == null) {
+      throw new IllegalArgumentException("minValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value == null || value.doubleValue() < minValue.doubleValue(), errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is less than or equal to the maximum value.
    *
@@ -421,10 +512,10 @@ public class Validator {
    * @throws IllegalArgumentException if maxValue is null
    */
   public <T extends Number> Validator max(T value, T maxValue, String name) {
-    return max(
+    return maxInternal(
         value,
         maxValue,
-        () -> formatMessage(value, name, String.format("must be at most %s", maxValue), true));
+        () -> createError(value, name, String.format("must be at most %s", maxValue), true));
   }
 
   /**
@@ -440,12 +531,7 @@ public class Validator {
    * @throws IllegalArgumentException if maxValue is null
    */
   public <T extends Number> Validator max(T value, T maxValue, Supplier<String> messageSupplier) {
-    if (maxValue == null) {
-      throw new IllegalArgumentException("maxValue cannot be null");
-    }
-
-    return assertFalse(
-        value == null || value.doubleValue() > maxValue.doubleValue(), messageSupplier);
+    return maxInternal(value, maxValue, () -> createError(messageSupplier));
   }
 
   /**
@@ -463,6 +549,194 @@ public class Validator {
     return max(value, maxValue, (String) null);
   }
 
+  private <T extends Number> Validator maxInternal(
+      T value, T maxValue, Supplier<ValidationError> errorSupplier) {
+    if (maxValue == null) {
+      throw new IllegalArgumentException("maxValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value == null || value.doubleValue() > maxValue.doubleValue(), errorSupplier);
+  }
+
+  // ========================================
+  // Sign Validation Methods
+  // ========================================
+
+  /**
+   * Validates that the specified numeric value is positive (greater than zero).
+   *
+   * @param value the numeric value to check
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or not positive and fail-fast is enabled
+   */
+  public Validator isPositive(Number value, String name) {
+    return isPositiveInternal(value, () -> createError(value, name, "must be positive", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is positive (greater than zero).
+   *
+   * @param value the numeric value to check
+   * @param messageSupplier supplier for the error message if the value is not positive
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or not positive and fail-fast is enabled
+   */
+  public Validator isPositive(Number value, Supplier<String> messageSupplier) {
+    return isPositiveInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is positive (greater than zero).
+   *
+   * @param value the numeric value to check
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or not positive and fail-fast is enabled
+   */
+  public Validator isPositive(Number value) {
+    return isPositive(value, (String) null);
+  }
+
+  private Validator isPositiveInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() <= 0, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is negative (less than zero).
+   *
+   * @param value the numeric value to check
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or not negative and fail-fast is enabled
+   */
+  public Validator isNegative(Number value, String name) {
+    return isNegativeInternal(value, () -> createError(value, name, "must be negative", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is negative (less than zero).
+   *
+   * @param value the numeric value to check
+   * @param messageSupplier supplier for the error message if the value is not negative
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or not negative and fail-fast is enabled
+   */
+  public Validator isNegative(Number value, Supplier<String> messageSupplier) {
+    return isNegativeInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is negative (less than zero).
+   *
+   * @param value the numeric value to check
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or not negative and fail-fast is enabled
+   */
+  public Validator isNegative(Number value) {
+    return isNegative(value, (String) null);
+  }
+
+  private Validator isNegativeInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() >= 0, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is non-negative (greater than or equal to zero).
+   *
+   * @param value the numeric value to check
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or negative and fail-fast is enabled
+   */
+  public Validator isNonNegative(Number value, String name) {
+    return isNonNegativeInternal(
+        value, () -> createError(value, name, "must be non-negative", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is non-negative (greater than or equal to zero).
+   *
+   * @param value the numeric value to check
+   * @param messageSupplier supplier for the error message if the value is negative
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or negative and fail-fast is enabled
+   */
+  public Validator isNonNegative(Number value, Supplier<String> messageSupplier) {
+    return isNonNegativeInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is non-negative (greater than or equal to zero).
+   *
+   * @param value the numeric value to check
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or negative and fail-fast is enabled
+   */
+  public Validator isNonNegative(Number value) {
+    return isNonNegative(value, (String) null);
+  }
+
+  private Validator isNonNegativeInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() < 0, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is non-positive (less than or equal to zero).
+   *
+   * @param value the numeric value to check
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or positive and fail-fast is enabled
+   */
+  public Validator isNonPositive(Number value, String name) {
+    return isNonPositiveInternal(
+        value, () -> createError(value, name, "must be non-positive", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is non-positive (less than or equal to zero).
+   *
+   * @param value the numeric value to check
+   * @param messageSupplier supplier for the error message if the value is positive
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or positive and fail-fast is enabled
+   */
+  public Validator isNonPositive(Number value, Supplier<String> messageSupplier) {
+    return isNonPositiveInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is non-positive (less than or equal to zero).
+   *
+   * @param value the numeric value to check
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or positive and fail-fast is enabled
+   */
+  public Validator isNonPositive(Number value) {
+    return isNonPositive(value, (String) null);
+  }
+
+  private Validator isNonPositiveInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() > 0, errorSupplier);
+  }
+
+  // ========================================
+  // String Validation Methods
+  // ========================================
+
   /**
    * Validates that the specified string is not null and not empty.
    *
@@ -473,7 +747,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(String value, String name) {
-    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
+    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
   }
 
   /**
@@ -486,7 +760,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.isEmpty(), messageSupplier);
+    return notEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -501,80 +775,8 @@ public class Validator {
     return notEmpty(value, (String) null);
   }
 
-  /**
-   * Validates that the specified collection is not null and not empty.
-   *
-   * @param value the collection to check
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or empty and fail-fast is enabled
-   */
-  public Validator notEmpty(Collection<?> value, String name) {
-    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
-  }
-
-  /**
-   * Validates that the specified collection is not null and not empty.
-   *
-   * @param value the collection to check
-   * @param messageSupplier supplier for the error message if the value is null or empty
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or empty and fail-fast is enabled
-   */
-  public Validator notEmpty(Collection<?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.isEmpty(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified collection is not null and not empty.
-   *
-   * @param value the collection to check
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or empty and fail-fast is enabled
-   */
-  public Validator notEmpty(Collection<?> value) {
-    return notEmpty(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified map is not null and not empty.
-   *
-   * @param value the map to check
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or empty and fail-fast is enabled
-   */
-  public Validator notEmpty(Map<?, ?> value, String name) {
-    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
-  }
-
-  /**
-   * Validates that the specified map is not null and not empty.
-   *
-   * @param value the map to check
-   * @param messageSupplier supplier for the error message if the value is null or empty
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or empty and fail-fast is enabled
-   */
-  public Validator notEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.isEmpty(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified map is not null and not empty.
-   *
-   * @param value the map to check
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or empty and fail-fast is enabled
-   */
-  public Validator notEmpty(Map<?, ?> value) {
-    return notEmpty(value, (String) null);
+  private Validator notEmptyInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.isEmpty(), errorSupplier);
   }
 
   /**
@@ -588,7 +790,7 @@ public class Validator {
    *     value is null, empty, or blank and fail-fast is enabled
    */
   public Validator notBlank(String value, String name) {
-    return notBlank(value, () -> formatMessage(value, name, "must not be blank", false));
+    return notBlankInternal(value, () -> createError(value, name, "must not be blank", false));
   }
 
   /**
@@ -602,7 +804,7 @@ public class Validator {
    *     value is null, empty, or blank and fail-fast is enabled
    */
   public Validator notBlank(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.trim().isEmpty(), messageSupplier);
+    return notBlankInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -618,6 +820,10 @@ public class Validator {
     return notBlank(value, (String) null);
   }
 
+  private Validator notBlankInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.trim().isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified string has a length within the given range (inclusive).
    *
@@ -631,12 +837,12 @@ public class Validator {
    * @throws IllegalArgumentException if minLength is greater than maxLength
    */
   public Validator hasLength(String value, int minLength, int maxLength, String name) {
-    return hasLength(
+    return hasLengthInternal(
         value,
         minLength,
         maxLength,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must have length between %d and %d", minLength, maxLength),
@@ -657,12 +863,7 @@ public class Validator {
    */
   public Validator hasLength(
       String value, int minLength, int maxLength, Supplier<String> messageSupplier) {
-    if (minLength > maxLength) {
-      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
-    }
-
-    return assertFalse(
-        value == null || value.length() < minLength || value.length() > maxLength, messageSupplier);
+    return hasLengthInternal(value, minLength, maxLength, () -> createError(messageSupplier));
   }
 
   /**
@@ -680,6 +881,218 @@ public class Validator {
     return hasLength(value, minLength, maxLength, (String) null);
   }
 
+  private Validator hasLengthInternal(
+      String value, int minLength, int maxLength, Supplier<ValidationError> errorSupplier) {
+    if (minLength > maxLength) {
+      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
+    }
+
+    return assertFalseInternal(
+        value == null || value.length() < minLength || value.length() > maxLength, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified string matches the given regular expression pattern.
+   *
+   * @param value the string value to check
+   * @param regex the regular expression pattern to match against
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator matches(String value, String regex, String name) {
+    return matchesInternal(
+        value,
+        regex,
+        () -> createError(value, name, String.format("must match pattern '%s'", regex), true));
+  }
+
+  /**
+   * Validates that the specified string matches the given regular expression pattern.
+   *
+   * @param value the string value to check
+   * @param regex the regular expression pattern to match against
+   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator matches(String value, String regex, Supplier<String> messageSupplier) {
+    return matchesInternal(value, regex, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified string matches the given regular expression pattern.
+   *
+   * @param value the string value to check
+   * @param regex the regular expression pattern to match against
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator matches(String value, String regex) {
+    return matches(value, regex, (String) null);
+  }
+
+  private Validator matchesInternal(
+      String value, String regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+
+    return matchesInternal(
+        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), errorSupplier);
+  }
+
+  /**
+   * Validates that the specified string matches the given compiled regular expression pattern.
+   *
+   * @param value the string value to check
+   * @param regex the compiled regular expression pattern to match against
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator matches(String value, Pattern regex, String name) {
+    return matchesInternal(
+        value,
+        regex,
+        () ->
+            createError(
+                value, name, String.format("must match pattern '%s'", regex.pattern()), true));
+  }
+
+  /**
+   * Validates that the specified string matches the given compiled regular expression pattern.
+   *
+   * @param value the string value to check
+   * @param regex the compiled regular expression pattern to match against
+   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator matches(String value, Pattern regex, Supplier<String> messageSupplier) {
+    return matchesInternal(value, regex, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified string matches the given compiled regular expression pattern.
+   *
+   * @param value the string value to check
+   * @param regex the compiled regular expression pattern to match against
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator matches(String value, Pattern regex) {
+    return matches(value, regex, (String) null);
+  }
+
+  private Validator matchesInternal(
+      String value, Pattern regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+    return assertFalseInternal(value == null || !regex.matcher(value).matches(), errorSupplier);
+  }
+
+  // ========================================
+  // Collection/Map Validation Methods
+  // ========================================
+
+  /**
+   * Validates that the specified collection is not null and not empty.
+   *
+   * @param value the collection to check
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or empty and fail-fast is enabled
+   */
+  public Validator notEmpty(Collection<?> value, String name) {
+    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
+  }
+
+  /**
+   * Validates that the specified collection is not null and not empty.
+   *
+   * @param value the collection to check
+   * @param messageSupplier supplier for the error message if the value is null or empty
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or empty and fail-fast is enabled
+   */
+  public Validator notEmpty(Collection<?> value, Supplier<String> messageSupplier) {
+    return notEmptyInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified collection is not null and not empty.
+   *
+   * @param value the collection to check
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or empty and fail-fast is enabled
+   */
+  public Validator notEmpty(Collection<?> value) {
+    return notEmpty(value, (String) null);
+  }
+
+  private Validator notEmptyInternal(Collection<?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.isEmpty(), errorSupplier);
+  }
+
+  /**
+   * Validates that the specified map is not null and not empty.
+   *
+   * @param value the map to check
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or empty and fail-fast is enabled
+   */
+  public Validator notEmpty(Map<?, ?> value, String name) {
+    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
+  }
+
+  /**
+   * Validates that the specified map is not null and not empty.
+   *
+   * @param value the map to check
+   * @param messageSupplier supplier for the error message if the value is null or empty
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or empty and fail-fast is enabled
+   */
+  public Validator notEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
+    return notEmptyInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified map is not null and not empty.
+   *
+   * @param value the map to check
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is null or empty and fail-fast is enabled
+   */
+  public Validator notEmpty(Map<?, ?> value) {
+    return notEmpty(value, (String) null);
+  }
+
+  private Validator notEmptyInternal(Map<?, ?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified collection has a size within the given range (inclusive).
    *
@@ -693,12 +1106,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator hasSize(Collection<?> value, int minSize, int maxSize, String name) {
-    return hasSize(
+    return hasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must have size between %d and %d", minSize, maxSize),
@@ -719,12 +1132,7 @@ public class Validator {
    */
   public Validator hasSize(
       Collection<?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value == null || value.size() < minSize || value.size() > maxSize, messageSupplier);
+    return hasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -742,6 +1150,16 @@ public class Validator {
     return hasSize(value, minSize, maxSize, (String) null);
   }
 
+  private Validator hasSizeInternal(
+      Collection<?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalseInternal(
+        value == null || value.size() < minSize || value.size() > maxSize, errorSupplier);
+  }
+
   /**
    * Validates that the specified map has a size within the given range (inclusive).
    *
@@ -755,12 +1173,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator hasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
-    return hasSize(
+    return hasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must have size between %d and %d", minSize, maxSize),
@@ -781,12 +1199,7 @@ public class Validator {
    */
   public Validator hasSize(
       Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value == null || value.size() < minSize || value.size() > maxSize, messageSupplier);
+    return hasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -804,261 +1217,19 @@ public class Validator {
     return hasSize(value, minSize, maxSize, (String) null);
   }
 
-  /**
-   * Validates that the specified numeric value is positive (greater than zero).
-   *
-   * @param value the numeric value to check
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or not positive and fail-fast is enabled
-   */
-  public Validator isPositive(Number value, String name) {
-    return isPositive(value, () -> formatMessage(value, name, "must be positive", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is positive (greater than zero).
-   *
-   * @param value the numeric value to check
-   * @param messageSupplier supplier for the error message if the value is not positive
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or not positive and fail-fast is enabled
-   */
-  public Validator isPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() <= 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is positive (greater than zero).
-   *
-   * @param value the numeric value to check
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or not positive and fail-fast is enabled
-   */
-  public Validator isPositive(Number value) {
-    return isPositive(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is negative (less than zero).
-   *
-   * @param value the numeric value to check
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or not negative and fail-fast is enabled
-   */
-  public Validator isNegative(Number value, String name) {
-    return isNegative(value, () -> formatMessage(value, name, "must be negative", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is negative (less than zero).
-   *
-   * @param value the numeric value to check
-   * @param messageSupplier supplier for the error message if the value is not negative
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or not negative and fail-fast is enabled
-   */
-  public Validator isNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() >= 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is negative (less than zero).
-   *
-   * @param value the numeric value to check
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or not negative and fail-fast is enabled
-   */
-  public Validator isNegative(Number value) {
-    return isNegative(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is non-negative (greater than or equal to zero).
-   *
-   * @param value the numeric value to check
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or negative and fail-fast is enabled
-   */
-  public Validator isNonNegative(Number value, String name) {
-    return isNonNegative(value, () -> formatMessage(value, name, "must be non-negative", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is non-negative (greater than or equal to zero).
-   *
-   * @param value the numeric value to check
-   * @param messageSupplier supplier for the error message if the value is negative
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or negative and fail-fast is enabled
-   */
-  public Validator isNonNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() < 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is non-negative (greater than or equal to zero).
-   *
-   * @param value the numeric value to check
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or negative and fail-fast is enabled
-   */
-  public Validator isNonNegative(Number value) {
-    return isNonNegative(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is non-positive (less than or equal to zero).
-   *
-   * @param value the numeric value to check
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or positive and fail-fast is enabled
-   */
-  public Validator isNonPositive(Number value, String name) {
-    return isNonPositive(value, () -> formatMessage(value, name, "must be non-positive", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is non-positive (less than or equal to zero).
-   *
-   * @param value the numeric value to check
-   * @param messageSupplier supplier for the error message if the value is positive
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or positive and fail-fast is enabled
-   */
-  public Validator isNonPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() > 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is non-positive (less than or equal to zero).
-   *
-   * @param value the numeric value to check
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or positive and fail-fast is enabled
-   */
-  public Validator isNonPositive(Number value) {
-    return isNonPositive(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified string matches the given regular expression pattern.
-   *
-   * @param value the string value to check
-   * @param regex the regular expression pattern to match against
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator matches(String value, String regex, String name) {
-    return matches(
-        value,
-        regex,
-        () -> formatMessage(value, name, String.format("must match pattern '%s'", regex), true));
-  }
-
-  /**
-   * Validates that the specified string matches the given regular expression pattern.
-   *
-   * @param value the string value to check
-   * @param regex the regular expression pattern to match against
-   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator matches(String value, String regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
+  private Validator hasSizeInternal(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
     }
 
-    return matches(
-        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), messageSupplier);
+    return assertFalseInternal(
+        value == null || value.size() < minSize || value.size() > maxSize, errorSupplier);
   }
 
-  /**
-   * Validates that the specified string matches the given regular expression pattern.
-   *
-   * @param value the string value to check
-   * @param regex the regular expression pattern to match against
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator matches(String value, String regex) {
-    return matches(value, regex, (String) null);
-  }
-
-  /**
-   * Validates that the specified string matches the given compiled regular expression pattern.
-   *
-   * @param value the string value to check
-   * @param regex the compiled regular expression pattern to match against
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator matches(String value, Pattern regex, String name) {
-    return matches(
-        value,
-        regex,
-        () ->
-            formatMessage(
-                value, name, String.format("must match pattern '%s'", regex.pattern()), true));
-  }
-
-  /**
-   * Validates that the specified string matches the given compiled regular expression pattern.
-   *
-   * @param value the string value to check
-   * @param regex the compiled regular expression pattern to match against
-   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator matches(String value, Pattern regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
-    }
-    return assertFalse(value == null || !regex.matcher(value).matches(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified string matches the given compiled regular expression pattern.
-   *
-   * @param value the string value to check
-   * @param regex the compiled regular expression pattern to match against
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is null or doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator matches(String value, Pattern regex) {
-    return matches(value, regex, (String) null);
-  }
+  // ========================================
+  // Null-Tolerant Range Methods
+  // ========================================
 
   /**
    * Validates that the specified numeric value is null or within the given range (inclusive). This
@@ -1075,12 +1246,12 @@ public class Validator {
    * @throws IllegalArgumentException if min or max are null
    */
   public <T extends Number> Validator nullOrInRange(T value, T min, T max, String name) {
-    return nullOrInRange(
+    return nullOrInRangeInternal(
         value,
         min,
         max,
         () ->
-            formatMessage(
+            createError(
                 value, name, String.format("must be null or between %s and %s", min, max), true));
   }
 
@@ -1101,14 +1272,7 @@ public class Validator {
    */
   public <T extends Number> Validator nullOrInRange(
       T value, T min, T max, Supplier<String> messageSupplier) {
-    if (min == null || max == null) {
-      throw new IllegalArgumentException("min and max cannot be null");
-    }
-
-    return assertFalse(
-        value != null
-            && (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
-        messageSupplier);
+    return nullOrInRangeInternal(value, min, max, () -> createError(messageSupplier));
   }
 
   /**
@@ -1128,6 +1292,349 @@ public class Validator {
     return nullOrInRange(value, min, max, (String) null);
   }
 
+  private <T extends Number> Validator nullOrInRangeInternal(
+      T value, T min, T max, Supplier<ValidationError> errorSupplier) {
+    if (min == null || max == null) {
+      throw new IllegalArgumentException("min and max cannot be null");
+    }
+
+    return assertFalseInternal(
+        value != null
+            && (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
+        errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is null or greater than or equal to the minimum
+   * value. This method passes validation if the value is null OR if it's at least the minimum
+   * value.
+   *
+   * @param <T> the type of the numeric value
+   * @param value the numeric value to check (can be null)
+   * @param minValue the minimum allowed value (inclusive)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and less than minValue and fail-fast is enabled
+   * @throws IllegalArgumentException if minValue is null
+   */
+  public <T extends Number> Validator nullOrMin(T value, T minValue, String name) {
+    return nullOrMinInternal(
+        value,
+        minValue,
+        () ->
+            createError(value, name, String.format("must be null or at least %s", minValue), true));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or greater than or equal to the minimum
+   * value. This method passes validation if the value is null OR if it's at least the minimum
+   * value.
+   *
+   * @param <T> the type of the numeric value
+   * @param value the numeric value to check (can be null)
+   * @param minValue the minimum allowed value (inclusive)
+   * @param messageSupplier supplier for the error message if the value is not null and less than
+   *     minValue
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and less than minValue and fail-fast is enabled
+   * @throws IllegalArgumentException if minValue is null
+   */
+  public <T extends Number> Validator nullOrMin(
+      T value, T minValue, Supplier<String> messageSupplier) {
+    return nullOrMinInternal(value, minValue, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or greater than or equal to the minimum
+   * value. This method passes validation if the value is null OR if it's at least the minimum
+   * value.
+   *
+   * @param <T> the type of the numeric value
+   * @param value the numeric value to check (can be null)
+   * @param minValue the minimum allowed value (inclusive)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and less than minValue and fail-fast is enabled
+   * @throws IllegalArgumentException if minValue is null
+   */
+  public <T extends Number> Validator nullOrMin(T value, T minValue) {
+    return nullOrMin(value, minValue, (String) null);
+  }
+
+  private <T extends Number> Validator nullOrMinInternal(
+      T value, T minValue, Supplier<ValidationError> errorSupplier) {
+    if (minValue == null) {
+      throw new IllegalArgumentException("minValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value != null && value.doubleValue() < minValue.doubleValue(), errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is null or less than or equal to the maximum value.
+   * This method passes validation if the value is null OR if it's at most the maximum value.
+   *
+   * @param <T> the type of the numeric value
+   * @param value the numeric value to check (can be null)
+   * @param maxValue the maximum allowed value (inclusive)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and greater than maxValue and fail-fast is enabled
+   * @throws IllegalArgumentException if maxValue is null
+   */
+  public <T extends Number> Validator nullOrMax(T value, T maxValue, String name) {
+    return nullOrMaxInternal(
+        value,
+        maxValue,
+        () ->
+            createError(value, name, String.format("must be null or at most %s", maxValue), true));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or less than or equal to the maximum value.
+   * This method passes validation if the value is null OR if it's at most the maximum value.
+   *
+   * @param <T> the type of the numeric value
+   * @param value the numeric value to check (can be null)
+   * @param maxValue the maximum allowed value (inclusive)
+   * @param messageSupplier supplier for the error message if the value is not null and greater than
+   *     maxValue
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and greater than maxValue and fail-fast is enabled
+   * @throws IllegalArgumentException if maxValue is null
+   */
+  public <T extends Number> Validator nullOrMax(
+      T value, T maxValue, Supplier<String> messageSupplier) {
+    return nullOrMaxInternal(value, maxValue, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or less than or equal to the maximum value.
+   * This method passes validation if the value is null OR if it's at most the maximum value.
+   *
+   * @param <T> the type of the numeric value
+   * @param value the numeric value to check (can be null)
+   * @param maxValue the maximum allowed value (inclusive)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and greater than maxValue and fail-fast is enabled
+   * @throws IllegalArgumentException if maxValue is null
+   */
+  public <T extends Number> Validator nullOrMax(T value, T maxValue) {
+    return nullOrMax(value, maxValue, (String) null);
+  }
+
+  private <T extends Number> Validator nullOrMaxInternal(
+      T value, T maxValue, Supplier<ValidationError> errorSupplier) {
+    if (maxValue == null) {
+      throw new IllegalArgumentException("maxValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value != null && value.doubleValue() > maxValue.doubleValue(), errorSupplier);
+  }
+
+  // ========================================
+  // Null-Tolerant Sign Methods
+  // ========================================
+
+  /**
+   * Validates that the specified numeric value is null or positive (greater than zero). This method
+   * passes validation if the value is null OR if it's positive.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and not positive and fail-fast is enabled
+   */
+  public Validator nullOrIsPositive(Number value, String name) {
+    return nullOrIsPositiveInternal(
+        value, () -> createError(value, name, "must be null or positive", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or positive (greater than zero). This method
+   * passes validation if the value is null OR if it's positive.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param messageSupplier supplier for the error message if the value is not null and not positive
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and not positive and fail-fast is enabled
+   */
+  public Validator nullOrIsPositive(Number value, Supplier<String> messageSupplier) {
+    return nullOrIsPositiveInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or positive (greater than zero). This method
+   * passes validation if the value is null OR if it's positive.
+   *
+   * @param value the numeric value to check (can be null)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and not positive and fail-fast is enabled
+   */
+  public Validator nullOrIsPositive(Number value) {
+    return nullOrIsPositive(value, (String) null);
+  }
+
+  private Validator nullOrIsPositiveInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() <= 0, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is null or negative (less than zero). This method
+   * passes validation if the value is null OR if it's negative.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and not negative and fail-fast is enabled
+   */
+  public Validator nullOrIsNegative(Number value, String name) {
+    return nullOrIsNegativeInternal(
+        value, () -> createError(value, name, "must be null or negative", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or negative (less than zero). This method
+   * passes validation if the value is null OR if it's negative.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param messageSupplier supplier for the error message if the value is not null and not negative
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and not negative and fail-fast is enabled
+   */
+  public Validator nullOrIsNegative(Number value, Supplier<String> messageSupplier) {
+    return nullOrIsNegativeInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or negative (less than zero). This method
+   * passes validation if the value is null OR if it's negative.
+   *
+   * @param value the numeric value to check (can be null)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and not negative and fail-fast is enabled
+   */
+  public Validator nullOrIsNegative(Number value) {
+    return nullOrIsNegative(value, (String) null);
+  }
+
+  private Validator nullOrIsNegativeInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() >= 0, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is null or non-negative (greater than or equal to
+   * zero). This method passes validation if the value is null OR if it's non-negative.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and negative and fail-fast is enabled
+   */
+  public Validator nullOrIsNonNegative(Number value, String name) {
+    return nullOrIsNonNegativeInternal(
+        value, () -> createError(value, name, "must be null or non-negative", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or non-negative (greater than or equal to
+   * zero). This method passes validation if the value is null OR if it's non-negative.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param messageSupplier supplier for the error message if the value is not null and negative
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and negative and fail-fast is enabled
+   */
+  public Validator nullOrIsNonNegative(Number value, Supplier<String> messageSupplier) {
+    return nullOrIsNonNegativeInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or non-negative (greater than or equal to
+   * zero). This method passes validation if the value is null OR if it's non-negative.
+   *
+   * @param value the numeric value to check (can be null)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and negative and fail-fast is enabled
+   */
+  public Validator nullOrIsNonNegative(Number value) {
+    return nullOrIsNonNegative(value, (String) null);
+  }
+
+  private Validator nullOrIsNonNegativeInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() < 0, errorSupplier);
+  }
+
+  /**
+   * Validates that the specified numeric value is null or non-positive (less than or equal to
+   * zero). This method passes validation if the value is null OR if it's non-positive.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and positive and fail-fast is enabled
+   */
+  public Validator nullOrIsNonPositive(Number value, String name) {
+    return nullOrIsNonPositiveInternal(
+        value, () -> createError(value, name, "must be null or non-positive", true));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or non-positive (less than or equal to
+   * zero). This method passes validation if the value is null OR if it's non-positive.
+   *
+   * @param value the numeric value to check (can be null)
+   * @param messageSupplier supplier for the error message if the value is not null and positive
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and positive and fail-fast is enabled
+   */
+  public Validator nullOrIsNonPositive(Number value, Supplier<String> messageSupplier) {
+    return nullOrIsNonPositiveInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified numeric value is null or non-positive (less than or equal to
+   * zero). This method passes validation if the value is null OR if it's non-positive.
+   *
+   * @param value the numeric value to check (can be null)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and positive and fail-fast is enabled
+   */
+  public Validator nullOrIsNonPositive(Number value) {
+    return nullOrIsNonPositive(value, (String) null);
+  }
+
+  private Validator nullOrIsNonPositiveInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() > 0, errorSupplier);
+  }
+
+  // ========================================
+  // Null-Tolerant String Methods
+  // ========================================
+
   /**
    * Validates that the specified string is null or not empty. This method passes validation if the
    * value is null OR if it's not empty.
@@ -1139,8 +1646,8 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(String value, String name) {
-    return nullOrNotEmpty(
-        value, () -> formatMessage(value, name, "must be null or not empty", false));
+    return nullOrNotEmptyInternal(
+        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
   }
 
   /**
@@ -1154,7 +1661,7 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.isEmpty(), messageSupplier);
+    return nullOrNotEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1170,88 +1677,8 @@ public class Validator {
     return nullOrNotEmpty(value, (String) null);
   }
 
-  /**
-   * Validates that the specified collection is null or not empty. This method passes validation if
-   * the value is null OR if it's not empty.
-   *
-   * @param value the collection to check (can be null)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and empty and fail-fast is enabled
-   */
-  public Validator nullOrNotEmpty(Collection<?> value, String name) {
-    return nullOrNotEmpty(
-        value, () -> formatMessage(value, name, "must be null or not empty", false));
-  }
-
-  /**
-   * Validates that the specified collection is null or not empty. This method passes validation if
-   * the value is null OR if it's not empty.
-   *
-   * @param value the collection to check (can be null)
-   * @param messageSupplier supplier for the error message if the value is not null and empty
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and empty and fail-fast is enabled
-   */
-  public Validator nullOrNotEmpty(Collection<?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.isEmpty(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified collection is null or not empty. This method passes validation if
-   * the value is null OR if it's not empty.
-   *
-   * @param value the collection to check (can be null)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and empty and fail-fast is enabled
-   */
-  public Validator nullOrNotEmpty(Collection<?> value) {
-    return nullOrNotEmpty(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified map is null or not empty. This method passes validation if the
-   * value is null OR if it's not empty.
-   *
-   * @param value the map to check (can be null)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and empty and fail-fast is enabled
-   */
-  public Validator nullOrNotEmpty(Map<?, ?> value, String name) {
-    return nullOrNotEmpty(
-        value, () -> formatMessage(value, name, "must be null or not empty", false));
-  }
-
-  /**
-   * Validates that the specified map is null or not empty. This method passes validation if the
-   * value is null OR if it's not empty.
-   *
-   * @param value the map to check (can be null)
-   * @param messageSupplier supplier for the error message if the value is not null and empty
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and empty and fail-fast is enabled
-   */
-  public Validator nullOrNotEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.isEmpty(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified map is null or not empty. This method passes validation if the
-   * value is null OR if it's not empty.
-   *
-   * @param value the map to check (can be null)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and empty and fail-fast is enabled
-   */
-  public Validator nullOrNotEmpty(Map<?, ?> value) {
-    return nullOrNotEmpty(value, (String) null);
+  private Validator nullOrNotEmptyInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.isEmpty(), errorSupplier);
   }
 
   /**
@@ -1265,8 +1692,8 @@ public class Validator {
    *     value is not null and blank and fail-fast is enabled
    */
   public Validator nullOrNotBlank(String value, String name) {
-    return nullOrNotBlank(
-        value, () -> formatMessage(value, name, "must be null or not blank", false));
+    return nullOrNotBlankInternal(
+        value, () -> createError(value, name, "must be null or not blank", false));
   }
 
   /**
@@ -1280,7 +1707,7 @@ public class Validator {
    *     value is not null and blank and fail-fast is enabled
    */
   public Validator nullOrNotBlank(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.trim().isEmpty(), messageSupplier);
+    return nullOrNotBlankInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1294,6 +1721,10 @@ public class Validator {
    */
   public Validator nullOrNotBlank(String value) {
     return nullOrNotBlank(value, (String) null);
+  }
+
+  private Validator nullOrNotBlankInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.trim().isEmpty(), errorSupplier);
   }
 
   /**
@@ -1311,12 +1742,12 @@ public class Validator {
    * @throws IllegalArgumentException if minLength is greater than maxLength
    */
   public Validator nullOrHasLength(String value, int minLength, int maxLength, String name) {
-    return nullOrHasLength(
+    return nullOrHasLengthInternal(
         value,
         minLength,
         maxLength,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format(
@@ -1340,13 +1771,7 @@ public class Validator {
    */
   public Validator nullOrHasLength(
       String value, int minLength, int maxLength, Supplier<String> messageSupplier) {
-    if (minLength > maxLength) {
-      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
-    }
-
-    return assertFalse(
-        value != null && (value.length() < minLength || value.length() > maxLength),
-        messageSupplier);
+    return nullOrHasLengthInternal(value, minLength, maxLength, () -> createError(messageSupplier));
   }
 
   /**
@@ -1366,6 +1791,239 @@ public class Validator {
     return nullOrHasLength(value, minLength, maxLength, (String) null);
   }
 
+  private Validator nullOrHasLengthInternal(
+      String value, int minLength, int maxLength, Supplier<ValidationError> errorSupplier) {
+    if (minLength > maxLength) {
+      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
+    }
+
+    return assertFalseInternal(
+        value != null && (value.length() < minLength || value.length() > maxLength), errorSupplier);
+  }
+
+  /**
+   * Validates that the specified string is null or matches the given regular expression pattern.
+   * This method passes validation if the value is null OR if it matches the pattern.
+   *
+   * @param value the string value to check (can be null)
+   * @param regex the regular expression pattern to match against
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator nullOrMatches(String value, String regex, String name) {
+    return nullOrMatchesInternal(
+        value,
+        regex,
+        () ->
+            createError(
+                value, name, String.format("must be null or match pattern '%s'", regex), true));
+  }
+
+  /**
+   * Validates that the specified string is null or matches the given regular expression pattern.
+   * This method passes validation if the value is null OR if it matches the pattern.
+   *
+   * @param value the string value to check (can be null)
+   * @param regex the regular expression pattern to match against
+   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator nullOrMatches(String value, String regex, Supplier<String> messageSupplier) {
+    return nullOrMatchesInternal(value, regex, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified string is null or matches the given regular expression pattern.
+   * This method passes validation if the value is null OR if it matches the pattern.
+   *
+   * @param value the string value to check (can be null)
+   * @param regex the regular expression pattern to match against
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator nullOrMatches(String value, String regex) {
+    return nullOrMatches(value, regex, (String) null);
+  }
+
+  private Validator nullOrMatchesInternal(
+      String value, String regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+
+    return nullOrMatchesInternal(
+        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), errorSupplier);
+  }
+
+  /**
+   * Validates that the specified string is null or matches the given compiled regular expression
+   * pattern. This method passes validation if the value is null OR if it matches the pattern.
+   *
+   * @param value the string value to check (can be null)
+   * @param regex the compiled regular expression pattern to match against
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator nullOrMatches(String value, Pattern regex, String name) {
+    return nullOrMatchesInternal(
+        value,
+        regex,
+        () ->
+            createError(
+                value,
+                name,
+                String.format("must be null or match pattern '%s'", regex.pattern()),
+                true));
+  }
+
+  /**
+   * Validates that the specified string is null or matches the given compiled regular expression
+   * pattern. This method passes validation if the value is null OR if it matches the pattern.
+   *
+   * @param value the string value to check (can be null)
+   * @param regex the compiled regular expression pattern to match against
+   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator nullOrMatches(String value, Pattern regex, Supplier<String> messageSupplier) {
+    return nullOrMatchesInternal(value, regex, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified string is null or matches the given compiled regular expression
+   * pattern. This method passes validation if the value is null OR if it matches the pattern.
+   *
+   * @param value the string value to check (can be null)
+   * @param regex the compiled regular expression pattern to match against
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and doesn't match the pattern and fail-fast is enabled
+   * @throws IllegalArgumentException if regex pattern is null
+   */
+  public Validator nullOrMatches(String value, Pattern regex) {
+    return nullOrMatches(value, regex, (String) null);
+  }
+
+  private Validator nullOrMatchesInternal(
+      String value, Pattern regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+    return assertFalseInternal(value != null && !regex.matcher(value).matches(), errorSupplier);
+  }
+
+  // ========================================
+  // Null-Tolerant Collection/Map Methods
+  // ========================================
+
+  /**
+   * Validates that the specified collection is null or not empty. This method passes validation if
+   * the value is null OR if it's not empty.
+   *
+   * @param value the collection to check (can be null)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and empty and fail-fast is enabled
+   */
+  public Validator nullOrNotEmpty(Collection<?> value, String name) {
+    return nullOrNotEmptyInternal(
+        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
+  }
+
+  /**
+   * Validates that the specified collection is null or not empty. This method passes validation if
+   * the value is null OR if it's not empty.
+   *
+   * @param value the collection to check (can be null)
+   * @param messageSupplier supplier for the error message if the value is not null and empty
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and empty and fail-fast is enabled
+   */
+  public Validator nullOrNotEmpty(Collection<?> value, Supplier<String> messageSupplier) {
+    return nullOrNotEmptyInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified collection is null or not empty. This method passes validation if
+   * the value is null OR if it's not empty.
+   *
+   * @param value the collection to check (can be null)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and empty and fail-fast is enabled
+   */
+  public Validator nullOrNotEmpty(Collection<?> value) {
+    return nullOrNotEmpty(value, (String) null);
+  }
+
+  private Validator nullOrNotEmptyInternal(
+      Collection<?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.isEmpty(), errorSupplier);
+  }
+
+  /**
+   * Validates that the specified map is null or not empty. This method passes validation if the
+   * value is null OR if it's not empty.
+   *
+   * @param value the map to check (can be null)
+   * @param name the parameter name for error messages
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and empty and fail-fast is enabled
+   */
+  public Validator nullOrNotEmpty(Map<?, ?> value, String name) {
+    return nullOrNotEmptyInternal(
+        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
+  }
+
+  /**
+   * Validates that the specified map is null or not empty. This method passes validation if the
+   * value is null OR if it's not empty.
+   *
+   * @param value the map to check (can be null)
+   * @param messageSupplier supplier for the error message if the value is not null and empty
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and empty and fail-fast is enabled
+   */
+  public Validator nullOrNotEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
+    return nullOrNotEmptyInternal(value, () -> createError(messageSupplier));
+  }
+
+  /**
+   * Validates that the specified map is null or not empty. This method passes validation if the
+   * value is null OR if it's not empty.
+   *
+   * @param value the map to check (can be null)
+   * @return this validator instance for method chaining
+   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
+   *     value is not null and empty and fail-fast is enabled
+   */
+  public Validator nullOrNotEmpty(Map<?, ?> value) {
+    return nullOrNotEmpty(value, (String) null);
+  }
+
+  private Validator nullOrNotEmptyInternal(
+      Map<?, ?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified collection is null or has a size within the given range
    * (inclusive). This method passes validation if the value is null OR if its size is within the
@@ -1381,12 +2039,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator nullOrHasSize(Collection<?> value, int minSize, int maxSize, String name) {
-    return nullOrHasSize(
+    return nullOrHasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must be null or have size between %d and %d", minSize, maxSize),
@@ -1409,12 +2067,7 @@ public class Validator {
    */
   public Validator nullOrHasSize(
       Collection<?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value != null && (value.size() < minSize || value.size() > maxSize), messageSupplier);
+    return nullOrHasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -1434,6 +2087,16 @@ public class Validator {
     return nullOrHasSize(value, minSize, maxSize, (String) null);
   }
 
+  private Validator nullOrHasSizeInternal(
+      Collection<?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalseInternal(
+        value != null && (value.size() < minSize || value.size() > maxSize), errorSupplier);
+  }
+
   /**
    * Validates that the specified map is null or has a size within the given range (inclusive). This
    * method passes validation if the value is null OR if its size is within the specified range.
@@ -1448,12 +2111,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator nullOrHasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
-    return nullOrHasSize(
+    return nullOrHasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must be null or have size between %d and %d", minSize, maxSize),
@@ -1475,12 +2138,7 @@ public class Validator {
    */
   public Validator nullOrHasSize(
       Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value != null && (value.size() < minSize || value.size() > maxSize), messageSupplier);
+    return nullOrHasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -1499,451 +2157,13 @@ public class Validator {
     return nullOrHasSize(value, minSize, maxSize, (String) null);
   }
 
-  /**
-   * Validates that the specified numeric value is null or positive (greater than zero). This method
-   * passes validation if the value is null OR if it's positive.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and not positive and fail-fast is enabled
-   */
-  public Validator nullOrIsPositive(Number value, String name) {
-    return nullOrIsPositive(
-        value, () -> formatMessage(value, name, "must be null or positive", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is null or positive (greater than zero). This method
-   * passes validation if the value is null OR if it's positive.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param messageSupplier supplier for the error message if the value is not null and not positive
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and not positive and fail-fast is enabled
-   */
-  public Validator nullOrIsPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() <= 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or positive (greater than zero). This method
-   * passes validation if the value is null OR if it's positive.
-   *
-   * @param value the numeric value to check (can be null)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and not positive and fail-fast is enabled
-   */
-  public Validator nullOrIsPositive(Number value) {
-    return nullOrIsPositive(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or negative (less than zero). This method
-   * passes validation if the value is null OR if it's negative.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and not negative and fail-fast is enabled
-   */
-  public Validator nullOrIsNegative(Number value, String name) {
-    return nullOrIsNegative(
-        value, () -> formatMessage(value, name, "must be null or negative", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is null or negative (less than zero). This method
-   * passes validation if the value is null OR if it's negative.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param messageSupplier supplier for the error message if the value is not null and not negative
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and not negative and fail-fast is enabled
-   */
-  public Validator nullOrIsNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() >= 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or negative (less than zero). This method
-   * passes validation if the value is null OR if it's negative.
-   *
-   * @param value the numeric value to check (can be null)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and not negative and fail-fast is enabled
-   */
-  public Validator nullOrIsNegative(Number value) {
-    return nullOrIsNegative(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified string is null or matches the given regular expression pattern.
-   * This method passes validation if the value is null OR if it matches the pattern.
-   *
-   * @param value the string value to check (can be null)
-   * @param regex the regular expression pattern to match against
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator nullOrMatches(String value, String regex, String name) {
-    return nullOrMatches(
-        value,
-        regex,
-        () ->
-            formatMessage(
-                value, name, String.format("must be null or match pattern '%s'", regex), true));
-  }
-
-  /**
-   * Validates that the specified string is null or matches the given regular expression pattern.
-   * This method passes validation if the value is null OR if it matches the pattern.
-   *
-   * @param value the string value to check (can be null)
-   * @param regex the regular expression pattern to match against
-   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator nullOrMatches(String value, String regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
+  private Validator nullOrHasSizeInternal(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
     }
 
-    return nullOrMatches(
-        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified string is null or matches the given regular expression pattern.
-   * This method passes validation if the value is null OR if it matches the pattern.
-   *
-   * @param value the string value to check (can be null)
-   * @param regex the regular expression pattern to match against
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator nullOrMatches(String value, String regex) {
-    return nullOrMatches(value, regex, (String) null);
-  }
-
-  /**
-   * Validates that the specified string is null or matches the given compiled regular expression
-   * pattern. This method passes validation if the value is null OR if it matches the pattern.
-   *
-   * @param value the string value to check (can be null)
-   * @param regex the compiled regular expression pattern to match against
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator nullOrMatches(String value, Pattern regex, String name) {
-    return nullOrMatches(
-        value,
-        regex,
-        () ->
-            formatMessage(
-                value,
-                name,
-                String.format("must be null or match pattern '%s'", regex.pattern()),
-                true));
-  }
-
-  /**
-   * Validates that the specified string is null or matches the given compiled regular expression
-   * pattern. This method passes validation if the value is null OR if it matches the pattern.
-   *
-   * @param value the string value to check (can be null)
-   * @param regex the compiled regular expression pattern to match against
-   * @param messageSupplier supplier for the error message if the value doesn't match the pattern
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator nullOrMatches(String value, Pattern regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
-    }
-    return assertFalse(value != null && !regex.matcher(value).matches(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified string is null or matches the given compiled regular expression
-   * pattern. This method passes validation if the value is null OR if it matches the pattern.
-   *
-   * @param value the string value to check (can be null)
-   * @param regex the compiled regular expression pattern to match against
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and doesn't match the pattern and fail-fast is enabled
-   * @throws IllegalArgumentException if regex pattern is null
-   */
-  public Validator nullOrMatches(String value, Pattern regex) {
-    return nullOrMatches(value, regex, (String) null);
-  }
-
-  /**
-   * Validates that the specified value is null.
-   *
-   * @param value the value to check for null
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and fail-fast is enabled
-   */
-  public Validator isNull(Object value, String name) {
-    return isNull(value, () -> formatMessage(value, name, "must be null", true));
-  }
-
-  /**
-   * Validates that the specified value is null.
-   *
-   * @param value the value to check for null
-   * @param messageSupplier supplier for the error message if the value is not null
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and fail-fast is enabled
-   */
-  public Validator isNull(Object value, Supplier<String> messageSupplier) {
-    return assertTrue(value == null, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified value is null.
-   *
-   * @param value the value to check for null
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and fail-fast is enabled
-   */
-  public Validator isNull(Object value) {
-    return isNull(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or non-negative (greater than or equal to
-   * zero). This method passes validation if the value is null OR if it's non-negative.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and negative and fail-fast is enabled
-   */
-  public Validator nullOrIsNonNegative(Number value, String name) {
-    return nullOrIsNonNegative(
-        value, () -> formatMessage(value, name, "must be null or non-negative", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is null or non-negative (greater than or equal to
-   * zero). This method passes validation if the value is null OR if it's non-negative.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param messageSupplier supplier for the error message if the value is not null and negative
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and negative and fail-fast is enabled
-   */
-  public Validator nullOrIsNonNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() < 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or non-negative (greater than or equal to
-   * zero). This method passes validation if the value is null OR if it's non-negative.
-   *
-   * @param value the numeric value to check (can be null)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and negative and fail-fast is enabled
-   */
-  public Validator nullOrIsNonNegative(Number value) {
-    return nullOrIsNonNegative(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or non-positive (less than or equal to
-   * zero). This method passes validation if the value is null OR if it's non-positive.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and positive and fail-fast is enabled
-   */
-  public Validator nullOrIsNonPositive(Number value, String name) {
-    return nullOrIsNonPositive(
-        value, () -> formatMessage(value, name, "must be null or non-positive", true));
-  }
-
-  /**
-   * Validates that the specified numeric value is null or non-positive (less than or equal to
-   * zero). This method passes validation if the value is null OR if it's non-positive.
-   *
-   * @param value the numeric value to check (can be null)
-   * @param messageSupplier supplier for the error message if the value is not null and positive
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and positive and fail-fast is enabled
-   */
-  public Validator nullOrIsNonPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() > 0, messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or non-positive (less than or equal to
-   * zero). This method passes validation if the value is null OR if it's non-positive.
-   *
-   * @param value the numeric value to check (can be null)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and positive and fail-fast is enabled
-   */
-  public Validator nullOrIsNonPositive(Number value) {
-    return nullOrIsNonPositive(value, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or greater than or equal to the minimum
-   * value. This method passes validation if the value is null OR if it's at least the minimum
-   * value.
-   *
-   * @param <T> the type of the numeric value
-   * @param value the numeric value to check (can be null)
-   * @param minValue the minimum allowed value (inclusive)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and less than minValue and fail-fast is enabled
-   * @throws IllegalArgumentException if minValue is null
-   */
-  public <T extends Number> Validator nullOrMin(T value, T minValue, String name) {
-    return nullOrMin(
-        value,
-        minValue,
-        () ->
-            formatMessage(
-                value, name, String.format("must be null or at least %s", minValue), true));
-  }
-
-  /**
-   * Validates that the specified numeric value is null or greater than or equal to the minimum
-   * value. This method passes validation if the value is null OR if it's at least the minimum
-   * value.
-   *
-   * @param <T> the type of the numeric value
-   * @param value the numeric value to check (can be null)
-   * @param minValue the minimum allowed value (inclusive)
-   * @param messageSupplier supplier for the error message if the value is not null and less than
-   *     minValue
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and less than minValue and fail-fast is enabled
-   * @throws IllegalArgumentException if minValue is null
-   */
-  public <T extends Number> Validator nullOrMin(
-      T value, T minValue, Supplier<String> messageSupplier) {
-    if (minValue == null) {
-      throw new IllegalArgumentException("minValue cannot be null");
-    }
-
-    return assertFalse(
-        value != null && value.doubleValue() < minValue.doubleValue(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or greater than or equal to the minimum
-   * value. This method passes validation if the value is null OR if it's at least the minimum
-   * value.
-   *
-   * @param <T> the type of the numeric value
-   * @param value the numeric value to check (can be null)
-   * @param minValue the minimum allowed value (inclusive)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and less than minValue and fail-fast is enabled
-   * @throws IllegalArgumentException if minValue is null
-   */
-  public <T extends Number> Validator nullOrMin(T value, T minValue) {
-    return nullOrMin(value, minValue, (String) null);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or less than or equal to the maximum value.
-   * This method passes validation if the value is null OR if it's at most the maximum value.
-   *
-   * @param <T> the type of the numeric value
-   * @param value the numeric value to check (can be null)
-   * @param maxValue the maximum allowed value (inclusive)
-   * @param name the parameter name for error messages
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and greater than maxValue and fail-fast is enabled
-   * @throws IllegalArgumentException if maxValue is null
-   */
-  public <T extends Number> Validator nullOrMax(T value, T maxValue, String name) {
-    return nullOrMax(
-        value,
-        maxValue,
-        () ->
-            formatMessage(
-                value, name, String.format("must be null or at most %s", maxValue), true));
-  }
-
-  /**
-   * Validates that the specified numeric value is null or less than or equal to the maximum value.
-   * This method passes validation if the value is null OR if it's at most the maximum value.
-   *
-   * @param <T> the type of the numeric value
-   * @param value the numeric value to check (can be null)
-   * @param maxValue the maximum allowed value (inclusive)
-   * @param messageSupplier supplier for the error message if the value is not null and greater than
-   *     maxValue
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and greater than maxValue and fail-fast is enabled
-   * @throws IllegalArgumentException if maxValue is null
-   */
-  public <T extends Number> Validator nullOrMax(
-      T value, T maxValue, Supplier<String> messageSupplier) {
-    if (maxValue == null) {
-      throw new IllegalArgumentException("maxValue cannot be null");
-    }
-
-    return assertFalse(
-        value != null && value.doubleValue() > maxValue.doubleValue(), messageSupplier);
-  }
-
-  /**
-   * Validates that the specified numeric value is null or less than or equal to the maximum value.
-   * This method passes validation if the value is null OR if it's at most the maximum value.
-   *
-   * @param <T> the type of the numeric value
-   * @param value the numeric value to check (can be null)
-   * @param maxValue the maximum allowed value (inclusive)
-   * @return this validator instance for method chaining
-   * @throws RuntimeException (specifically {@link ValidationException} by default) immediately if
-   *     value is not null and greater than maxValue and fail-fast is enabled
-   * @throws IllegalArgumentException if maxValue is null
-   */
-  public <T extends Number> Validator nullOrMax(T value, T maxValue) {
-    return nullOrMax(value, maxValue, (String) null);
+    return assertFalseInternal(
+        value != null && (value.size() < minSize || value.size() > maxSize), errorSupplier);
   }
 }

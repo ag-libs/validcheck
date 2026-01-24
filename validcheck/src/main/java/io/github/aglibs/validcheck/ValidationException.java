@@ -17,7 +17,7 @@ import java.util.List;
  *           .isPositive(age, "age")
  *           .validate();
  * } catch (ValidationException e) {
- *   List<String> errors = e.getErrors();
+ *   List<ValidationError> errors = e.getErrors();
  *   // Handle multiple validation errors
  * }
  * }</pre>
@@ -29,16 +29,18 @@ import java.util.List;
  */
 public class ValidationException extends RuntimeException {
 
-  /** Immutable list of all validation error messages. */
-  private final List<String> errors;
+  private static final long serialVersionUID = 1L;
+
+  /** Immutable list of all validation errors. */
+  private final List<ValidationError> errors;
 
   /**
    * Constructs a new ValidationException with the specified configuration.
    *
    * @param message the detail message combining all validation errors
-   * @param errors the list of individual validation error messages
+   * @param errors the list of individual validation errors
    */
-  protected ValidationException(String message, List<String> errors) {
+  protected ValidationException(String message, List<ValidationError> errors) {
     super(message);
     this.errors = Collections.unmodifiableList(errors);
   }
@@ -48,9 +50,10 @@ public class ValidationException extends RuntimeException {
    *
    * @param fillStackTrace whether to fill stack traces for performance optimization
    * @param message the detail message combining all validation errors
-   * @param errors the list of individual validation error messages
+   * @param errors the list of individual validation errors
    */
-  static ValidationException create(boolean fillStackTrace, String message, List<String> errors) {
+  static ValidationException create(
+      boolean fillStackTrace, String message, List<ValidationError> errors) {
     return fillStackTrace
         ? new ValidationException(message, errors)
         : new ValidationException(message, errors) {
@@ -62,11 +65,11 @@ public class ValidationException extends RuntimeException {
   }
 
   /**
-   * Returns the list of individual validation error messages.
+   * Returns the list of individual validation errors.
    *
-   * @return an unmodifiable list of validation error messages
+   * @return an unmodifiable list of validation errors
    */
-  public List<String> getErrors() {
+  public List<ValidationError> getErrors() {
     return errors;
   }
 }

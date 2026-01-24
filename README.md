@@ -231,6 +231,8 @@ ValidCheck.require()
 
 ## Error Handling
 
+All validation failures throw `ValidationException` which contains structured error information.
+
 ### Single Error (Fail-Fast)
 
 ```java
@@ -240,7 +242,8 @@ try {
     System.out.println(e.getMessage()); 
     // "'age' must be positive, but it was -5"
     
-    List<String> errors = e.getErrors(); // ["'age' must be positive, but it was -5"]
+    List<ValidationError> errors = e.getErrors();
+    // [ValidationError{field="age", message="must be positive, but it was -5"}]
 }
 ```
 
@@ -256,8 +259,38 @@ try {
     System.out.println(e.getMessage());
     // "'username' must not be null; 'age' must be positive, but it was -1"
     
-    List<String> errors = e.getErrors();
-    // ["'username' must not be null", "'age' must be positive, but it was -1"]
+    List<ValidationError> errors = e.getErrors();
+    // [ValidationError{field="username", message="must not be null"}, 
+    //  ValidationError{field="age", message="must be positive, but it was -1"}]
+}
+```
+
+### Working with ValidationError
+
+`ValidationError` provides structured access to field names and error messages:
+
+```java
+try {
+    ValidCheck.check()
+        .notNull(null, "username")
+        .isPositive(-1, "age")
+        .validate();
+} catch (ValidationException e) {
+    // Access structured error information
+    for (ValidationError error : e.getErrors()) {
+        String field = error.field();      // "username", "age"
+        String message = error.message();  // "must not be null", "must be positive, but it was -1"
+        String formatted = error.toString(); // "'username' must not be null"
+    }
+    
+    // Group errors by field for API responses
+    Map<String, List<String>> errorsByField = e.getErrors().stream()
+        .filter(err -> err.field() != null)
+        .collect(Collectors.groupingBy(
+            ValidationError::field,
+            Collectors.mapping(ValidationError::message, Collectors.toList())
+        ));
+    // {"username": ["must not be null"], "age": ["must be positive, but it was -1"]}
 }
 ```
 
@@ -270,13 +303,21 @@ ValidCheck allows you to throw custom exception types instead of the default `Va
 ```java
 // Throw IllegalArgumentException instead of ValidationException
 var validator = new Validator(true, true, true,
-    errors -> new IllegalArgumentException(String.join("; ", errors)));
+    errors -> new IllegalArgumentException(
+        String.join("; ", errors.stream()
+            .map(ValidationError::toString)
+            .collect(Collectors.toList()))));
 
 validator.notNull(null, "value"); // throws IllegalArgumentException
 
-// Custom formatting
+// Custom formatting with structured error access
 var validator = new BatchValidator(true, true,
-    errors -> new MyException("Validation failed:\n- " + String.join("\n- ", errors)));
+    errors -> {
+        String message = errors.stream()
+            .map(e -> e.field() + ": " + e.message())
+            .collect(Collectors.joining("\n- ", "Validation failed:\n- ", ""));
+        return new MyException(message);
+    });
 ```
 
 This is useful when integrating with frameworks that expect specific exception types (Spring, Jakarta Bean Validation, etc.).
