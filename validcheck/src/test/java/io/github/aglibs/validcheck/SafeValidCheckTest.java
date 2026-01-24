@@ -60,11 +60,16 @@ class SafeValidCheckTest {
   @Test
   void basicMethods() {
     SafeValidCheck.requireNotNull("");
+    SafeValidCheck.requireNotNull("", "field");
     SafeValidCheck.assertTrue(true, "error2");
 
     assertThatThrownBy(() -> SafeValidCheck.requireNotNull(null))
         .isInstanceOf(ValidationException.class)
         .hasMessage("parameter must not be null");
+
+    assertThatThrownBy(() -> SafeValidCheck.requireNotNull(null, "field"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("'field' must not be null");
 
     assertThatThrownBy(() -> SafeValidCheck.assertTrue(false, "error2"))
         .isInstanceOf(ValidationException.class)
