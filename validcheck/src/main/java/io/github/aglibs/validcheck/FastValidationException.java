@@ -22,6 +22,7 @@ import java.util.List;
  * <pre>{@code
  * // Configure validator to use FastValidationException (no stack trace)
  * Validator validator = new Validator(
+ *     true,  // includeValues - include invalid values in error messages
  *     true,  // failFast
  *     false, // fillStackTrace - use fast exception
  *     null   // exceptionFactory
