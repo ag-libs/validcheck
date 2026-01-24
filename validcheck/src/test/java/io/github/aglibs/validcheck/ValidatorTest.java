@@ -9,19 +9,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"ConstantValue"})
 class ValidatorTest {
 
   private static Validator validator() {
-    try {
-      return ValidCheck.require();
-    } catch (RuntimeException e) {
-      Assertions.fail(e);
-      throw e;
-    }
+    return ValidCheck.require();
   }
 
   @Test

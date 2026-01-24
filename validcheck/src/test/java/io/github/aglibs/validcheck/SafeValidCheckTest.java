@@ -3,7 +3,6 @@ package io.github.aglibs.validcheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class SafeValidCheckTest {
@@ -21,12 +20,7 @@ class SafeValidCheckTest {
   }
 
   private static Validator validator() {
-    try {
-      return SafeValidCheck.require();
-    } catch (RuntimeException e) {
-      Assertions.fail(e);
-      throw e;
-    }
+    return SafeValidCheck.require();
   }
 
   @Test
