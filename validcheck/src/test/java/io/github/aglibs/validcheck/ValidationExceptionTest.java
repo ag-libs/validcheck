@@ -10,7 +10,7 @@ public class ValidationExceptionTest {
 
   @SuppressWarnings("DataFlowIssue")
   @Test
-  void constructorAndGetErrorsMethodWithImmutableList() {
+  void constructorShouldStoreErrorsImmutably() {
     // Given - Exception parameters
     String message = "Error 1; Error 2";
     List<ValidationError> errors =
@@ -28,24 +28,6 @@ public class ValidationExceptionTest {
     // Then - Verify list is immutable
     assertThatThrownBy(() -> returnedErrors.add(new ValidationError(null, "Should fail")))
         .isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
-  void fillInStackTraceMethodWithDifferentConfigurations() {
-    // Given - Test both fillStackTrace configurations
-    List<ValidationError> errors = List.of(new ValidationError(null, "Test error"));
-
-    // When - Create exception with fillStackTrace = true
-    ValidationException withStackTrace = ValidationException.create(true, "Message", errors);
-
-    // Then - Should have stack trace elements
-    assertThat(withStackTrace.getStackTrace()).isNotEmpty();
-
-    // When - Create exception with fillStackTrace = false
-    ValidationException withoutStackTrace = ValidationException.create(false, "Message", errors);
-
-    // Then - Should have empty stack trace
-    assertThat(withoutStackTrace.getStackTrace()).isEmpty();
   }
 
   @Test

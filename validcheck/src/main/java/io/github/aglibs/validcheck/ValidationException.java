@@ -46,26 +46,8 @@ public class ValidationException extends RuntimeException {
   }
 
   /**
-   * Creates a new ValidationException with the specified configuration.
-   *
-   * @param fillStackTrace whether to fill stack traces for performance optimization
-   * @param message the detail message combining all validation errors
-   * @param errors the list of individual validation errors
-   */
-  static ValidationException create(
-      boolean fillStackTrace, String message, List<ValidationError> errors) {
-    return fillStackTrace
-        ? new ValidationException(message, errors)
-        : new ValidationException(message, errors) {
-          @Override
-          public synchronized Throwable fillInStackTrace() {
-            return this;
-          }
-        };
-  }
-
-  /**
-   * Returns the list of individual validation errors.
+   * Returns the list of individual validation errors. Returns the list of individual validation
+   * errors.
    *
    * @return an unmodifiable list of validation errors
    */

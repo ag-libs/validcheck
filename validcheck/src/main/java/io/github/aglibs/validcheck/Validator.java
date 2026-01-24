@@ -199,9 +199,11 @@ public class Validator {
     if (exceptionFactory != null) {
       return exceptionFactory.apply(Collections.unmodifiableList(errors));
     }
-    final var errorMessage =
+    final var message =
         errors.stream().map(ValidationError::toString).collect(Collectors.joining("; "));
-    return ValidationException.create(fillStackTrace, errorMessage, errors);
+    return fillStackTrace
+        ? new ValidationException(message, errors)
+        : new FastValidationException(message, errors);
   }
 
   // ========================================
