@@ -7,48 +7,41 @@ ValidCheck project.
 
 **Level of AI Involvement:** Primarily Human with AI Assistance
 
-ValidCheck was developed collaboratively between human developers and AI systems, with human
+ValidCheck is developed collaboratively between human developers and AI systems, with human
 oversight and decision-making throughout the development process.
 
 ## AI Tools Used
 
-- **Claude (Anthropic)** - Claude-3.5-Sonnet and Claude-4-Sonnet models
-- **Usage:** Code generation assistance, documentation writing, and refactoring suggestions
+- **Claude (Anthropic)** - Code generation assistance, documentation writing, and refactoring
+  suggestions
 - **GitHub Copilot** - AI-powered code completion and review assistance
-- **Usage:** Code reviews, suggestions during development, and code completion
 
-## What AI Was Used For
+## Scope of AI Assistance
 
-### Core Logic (Human-Written)
+AI tools are used throughout the development lifecycle to assist with:
 
-- **Validation algorithms and business logic** - Designed and implemented by human developers
-- **API design and architecture** - Human-directed decisions
-- **Security and error handling strategy** - Human-designed and validated
-
-### AI-Assisted Development
-
-- **Code generation** - AI generated initial code structure, all reviewed and modified by humans
-- **Documentation** - AI generated JavaDoc comments, all reviewed for accuracy
-- **Testing** - AI assisted with test case generation, human-verified for completeness
-- **Refactoring** - AI suggested improvements (e.g., renaming `logActualValue` to
-  `includeActualValue`)
-- **Code Reviews** - GitHub Copilot provided suggestions during development and review processes
+- Code generation and implementation
+- Documentation writing and maintenance
+- Test case generation
+- Code reviews and refactoring suggestions
+- Bug fixes and improvements
 
 ## Human Oversight
 
-All AI-generated content was:
+All AI-generated content is:
 
 - **Reviewed** by human developers
 - **Modified** as needed for correctness and quality
 - **Tested** to ensure functionality
 - **Validated** against Java best practices
 
-Human developers maintain full responsibility for code correctness, security, and API design.
+**Human developers maintain full responsibility for all code, design decisions, security, and API
+design.**
 
 ## Quality Assurance
 
 - All code compiles without warnings
-- Comprehensive test suite with full coverage
+- Comprehensive test suite with high coverage
 - All documentation examples verified to work
 - Follows established Java coding standards
 
