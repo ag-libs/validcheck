@@ -212,7 +212,6 @@ class BatchValidatorTest {
     List<String> smallList = List.of("a");
     Integer negativeNumber = -5;
     Integer positiveNumber = 5;
-    Integer zero = 0;
     String invalidPattern = "ABC123";
 
     // When - Use BatchValidator parameter-less methods

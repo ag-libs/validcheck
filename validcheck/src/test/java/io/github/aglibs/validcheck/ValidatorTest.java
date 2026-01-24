@@ -640,7 +640,7 @@ class ValidatorTest {
   void nullOrConditionalValidationMethods() {
     // Test nullOrInRange - null values should pass
     ValidCheck.require().nullOrInRange(null, 1, 10, "age");
-    ValidCheck.require().nullOrInRange((Integer) null, 1, 10);
+    ValidCheck.require().nullOrInRange(null, 1, 10);
 
     // Test nullOrInRange - valid values should pass
     ValidCheck.require().nullOrInRange(5, 1, 10, "age");
@@ -1247,11 +1247,9 @@ class ValidatorTest {
             true,
             errors ->
                 new IllegalArgumentException(
-                    String.join(
-                        "; ",
-                        errors.stream()
-                            .map(ValidationError::toString)
-                            .collect(Collectors.toList()))));
+                    errors.stream()
+                        .map(ValidationError::toString)
+                        .collect(Collectors.joining("; "))));
 
     // When & Then - Verify custom exception is thrown
     assertThatThrownBy(() -> validator.notNull(null, "value"))
@@ -1269,17 +1267,12 @@ class ValidatorTest {
             errors ->
                 new IllegalArgumentException(
                     "Errors:\n- "
-                        + String.join(
-                            "\n- ",
-                            errors.stream()
-                                .map(ValidationError::toString)
-                                .collect(Collectors.toList()))));
+                        + errors.stream()
+                            .map(ValidationError::toString)
+                            .collect(Collectors.joining("\n- "))));
 
     // When & Then - Verify custom formatting with multiple errors
-    assertThatThrownBy(
-            () -> {
-              validator.notNull(null, "field1").isPositive(-5, "field2").validate();
-            })
+    assertThatThrownBy(() -> validator.notNull(null, "field1").isPositive(-5, "field2").validate())
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Errors:\n- ")
         .hasMessageContaining("'field1' must not be null")
