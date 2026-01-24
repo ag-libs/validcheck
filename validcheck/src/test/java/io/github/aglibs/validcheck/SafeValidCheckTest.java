@@ -3,6 +3,7 @@ package io.github.aglibs.validcheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class SafeValidCheckTest {
@@ -13,10 +14,19 @@ class SafeValidCheckTest {
     String sensitiveData = "secret-password-123";
 
     // When & Then - Error message should NOT contain the sensitive value
-    assertThatThrownBy(() -> SafeValidCheck.require().hasLength(sensitiveData, 50, 100, "password"))
+    assertThatThrownBy(() -> validator().hasLength(sensitiveData, 50, 100, "password"))
         .isInstanceOf(FastValidationException.class)
         .hasMessageContaining("'password' must have length between 50 and 100")
         .hasMessageNotContaining(sensitiveData); // Value NOT included
+  }
+
+  private static Validator validator() {
+    try {
+      return SafeValidCheck.require();
+    } catch (RuntimeException e) {
+      Assertions.fail(e);
+      throw e;
+    }
   }
 
   @Test
