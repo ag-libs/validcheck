@@ -856,6 +856,11 @@ class ValidatorTest {
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'value' must be non-negative");
 
+    // When & Then - Test isNonNegative with supplier (invalid)
+    assertThatThrownBy(() -> ValidCheck.require().isNonNegative(-1, () -> "Value must be >= 0"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Value must be >= 0");
+
     // Test isNonPositive - zero should pass (<= 0)
     ValidCheck.require().isNonPositive(0, "value");
     ValidCheck.require().isNonPositive(-0.0);
@@ -875,6 +880,11 @@ class ValidatorTest {
     assertThatThrownBy(() -> ValidCheck.require().isNonPositive(null, "value"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'value' must be non-positive");
+
+    // When & Then - Test isNonPositive with supplier (invalid)
+    assertThatThrownBy(() -> ValidCheck.require().isNonPositive(1, () -> "Value must be <= 0"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Value must be <= 0");
   }
 
   @Test
@@ -984,6 +994,16 @@ class ValidatorTest {
     assertThatThrownBy(() -> ValidCheck.require().max(null, 100, "percentage"))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'percentage' must be at most 100");
+
+    // When & Then - Test min with supplier (invalid)
+    assertThatThrownBy(() -> ValidCheck.require().min(17, 18, () -> "Age must be at least 18"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Age must be at least 18");
+
+    // When & Then - Test max with supplier (invalid)
+    assertThatThrownBy(() -> ValidCheck.require().max(101, 100, () -> "Cannot exceed 100"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Cannot exceed 100");
   }
 
   @Test
@@ -1173,5 +1193,37 @@ class ValidatorTest {
         .hasMessageContaining("Errors:\n- ")
         .hasMessageContaining("'field1' must not be null")
         .hasMessageContaining("'field2' must be positive");
+  }
+
+  @Test
+  void nullOrMethodsWithSupplierMessage() {
+    // Given - Test values
+    Integer outOfRange = 15;
+    String emptyString = "";
+    Integer tooSmall = 10;
+    Integer tooLarge = 150;
+
+    // When & Then - Test nullOrInRange with supplier
+    assertThatThrownBy(
+            () -> ValidCheck.require().nullOrInRange(outOfRange, 1, 10, () -> "Value out of range"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Value out of range");
+
+    // When & Then - Test nullOrNotEmpty with supplier
+    assertThatThrownBy(
+            () -> ValidCheck.require().nullOrNotEmpty(emptyString, () -> "String cannot be empty"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("String cannot be empty");
+
+    // When & Then - Test nullOrMin with supplier
+    assertThatThrownBy(
+            () -> ValidCheck.require().nullOrMin(tooSmall, 18, () -> "Minimum age is 18"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Minimum age is 18");
+
+    // When & Then - Test nullOrMax with supplier
+    assertThatThrownBy(() -> ValidCheck.require().nullOrMax(tooLarge, 100, () -> "Maximum is 100"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Maximum is 100");
   }
 }

@@ -47,4 +47,24 @@ public class ValidationExceptionTest {
     // Then - Should have empty stack trace
     assertThat(withoutStackTrace.getStackTrace()).isEmpty();
   }
+
+  @Test
+  void validationErrorAccessors() {
+    // Given - Create ValidationError with field and message
+    ValidationError error1 = new ValidationError("username", "must not be null");
+    ValidationError error2 = new ValidationError(null, "general error");
+    ValidationError error3 = new ValidationError("username", "must not be null"); // For hashCode
+
+    // When & Then - Test field accessor
+    assertThat(error1.field()).isEqualTo("username");
+    assertThat(error2.field()).isNull();
+
+    // When & Then - Test message accessor
+    assertThat(error1.message()).isEqualTo("must not be null");
+    assertThat(error2.message()).isEqualTo("general error");
+
+    // When & Then - Test hashCode
+    assertThat(error1.hashCode()).isEqualTo(error3.hashCode());
+    assertThat(error1.hashCode()).isNotEqualTo(error2.hashCode());
+  }
 }

@@ -307,4 +307,24 @@ class BatchValidatorTest {
     assertThat(validator.isValid()).isTrue();
     assertThat(validator.getErrors()).isEmpty();
   }
+
+  @Test
+  void batchValidatorWithSupplierMessages() {
+    // Given
+    BatchValidator validator = ValidCheck.check();
+
+    // When - Add violations with supplier messages
+    validator
+        .notNull(null, () -> "First error")
+        .inRange(15, 1, 10, () -> "Second error")
+        .notEmpty("", () -> "Third error");
+
+    List<ValidationError> errors = validator.getErrors();
+
+    // Then
+    assertThat(errors).hasSize(3);
+    assertThat(errors.get(0).message()).isEqualTo("First error");
+    assertThat(errors.get(1).message()).isEqualTo("Second error");
+    assertThat(errors.get(2).message()).isEqualTo("Third error");
+  }
 }
