@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Base class for parameter validation with configurable behavior and fluent API. This class is
@@ -115,10 +116,11 @@ public class Validator {
   protected final boolean fillStackTrace;
 
   /** Factory for creating exceptions when validation fails. */
-  protected final java.util.function.Function<List<String>, RuntimeException> exceptionFactory;
+  protected final java.util.function.Function<List<ValidationError>, RuntimeException>
+      exceptionFactory;
 
   /** List of collected validation errors. */
-  protected final List<String> errors;
+  protected final List<ValidationError> errors;
 
   /**
    * Constructs a new Validator with the specified configuration.
@@ -134,7 +136,7 @@ public class Validator {
       boolean includeValues,
       boolean failFast,
       boolean fillStackTrace,
-      Function<List<String>, RuntimeException> exceptionFactory) {
+      Function<List<ValidationError>, RuntimeException> exceptionFactory) {
     this.includeValues = includeValues;
     this.failFast = failFast;
     this.fillStackTrace = fillStackTrace;
@@ -152,19 +154,23 @@ public class Validator {
     return string.substring(0, MAX_DISPLAYED_VALUE_LENGTH - 3) + "...";
   }
 
-  private String formatMessage(Object value, String name, String message, boolean includeValue) {
-    var paramName = name == null ? "parameter" : String.format("'%s'", name);
-    var error = String.format("%s %s", paramName, message);
+  private ValidationError createError(Supplier<String> messageSupplier) {
+    return new ValidationError(null, messageSupplier.get());
+  }
+
+  private ValidationError createError(
+      Object value, String name, String message, boolean includeValue) {
+    var error = name == null ? String.format("parameter %s", message) : message;
 
     if (this.includeValues && includeValue && value != null) {
       var stringValue = valueToString(value);
       var formattedValue =
           value instanceof String ? String.format("'%s'", stringValue) : stringValue;
       // limit the string length of string representation of the value
-      return error + String.format(", but it was %s", formattedValue);
+      return new ValidationError(name, error + String.format(", but it was %s", formattedValue));
     }
 
-    return error;
+    return new ValidationError(name, error);
   }
 
   /** Throws ValidationException if any errors have been collected. */
@@ -189,7 +195,8 @@ public class Validator {
     if (exceptionFactory != null) {
       return exceptionFactory.apply(Collections.unmodifiableList(errors));
     }
-    final var errorMessage = String.join("; ", errors);
+    final var errorMessage =
+        errors.stream().map(ValidationError::toString).collect(Collectors.joining("; "));
     return ValidationException.create(fillStackTrace, errorMessage, errors);
   }
 
@@ -216,14 +223,7 @@ public class Validator {
    *     condition is false and fail-fast is enabled
    */
   public Validator assertTrue(boolean condition, Supplier<String> messageSupplier) {
-    if (!condition) {
-      errors.add(messageSupplier.get());
-      if (failFast) {
-        validate();
-      }
-    }
-
-    return this;
+    return assertTrueInternal(condition, () -> createError(messageSupplier));
   }
 
   /**
@@ -252,6 +252,26 @@ public class Validator {
     return assertTrue(!condition, messageSupplier);
   }
 
+  private Validator notNullInternal(Object value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null, errorSupplier);
+  }
+
+  private Validator assertFalseInternal(
+      boolean condition, Supplier<ValidationError> errorSupplier) {
+    return assertTrueInternal(!condition, errorSupplier);
+  }
+
+  private Validator assertTrueInternal(boolean condition, Supplier<ValidationError> errorSupplier) {
+    if (!condition) {
+      errors.add(errorSupplier.get());
+      if (failFast) {
+        validate();
+      }
+    }
+
+    return this;
+  }
+
   /**
    * Validates that the specified value is not null.
    *
@@ -262,7 +282,7 @@ public class Validator {
    *     value is null and fail-fast is enabled
    */
   public Validator notNull(Object value, String name) {
-    return notNull(value, () -> formatMessage(value, name, "must not be null", true));
+    return notNullInternal(value, () -> createError(value, name, "must not be null", true));
   }
 
   /**
@@ -275,7 +295,7 @@ public class Validator {
    *     value is null and fail-fast is enabled
    */
   public Validator notNull(Object value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null, messageSupplier);
+    return notNullInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -288,6 +308,18 @@ public class Validator {
    */
   public Validator notNull(Object value) {
     return notNull(value, (String) null);
+  }
+
+  private <T extends Number> Validator inRangeInternal(
+      T value, T min, T max, Supplier<ValidationError> errorSupplier) {
+    if (min == null || max == null) {
+      throw new IllegalArgumentException("min and max cannot be null");
+    }
+
+    return assertFalseInternal(
+        value == null
+            || (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
+        errorSupplier);
   }
 
   /**
@@ -304,12 +336,11 @@ public class Validator {
    * @throws IllegalArgumentException if min or max are null
    */
   public <T extends Number> Validator inRange(T value, T min, T max, String name) {
-    return inRange(
+    return inRangeInternal(
         value,
         min,
         max,
-        () ->
-            formatMessage(value, name, String.format("must be between %s and %s", min, max), true));
+        () -> createError(value, name, String.format("must be between %s and %s", min, max), true));
   }
 
   /**
@@ -331,10 +362,7 @@ public class Validator {
       throw new IllegalArgumentException("min and max cannot be null");
     }
 
-    return assertFalse(
-        value == null
-            || (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
-        messageSupplier);
+    return inRangeInternal(value, min, max, () -> createError(messageSupplier));
   }
 
   /**
@@ -353,6 +381,16 @@ public class Validator {
     return inRange(value, min, max, (String) null);
   }
 
+  private <T extends Number> Validator minInternal(
+      T value, T minValue, Supplier<ValidationError> errorSupplier) {
+    if (minValue == null) {
+      throw new IllegalArgumentException("minValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value == null || value.doubleValue() < minValue.doubleValue(), errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is greater than or equal to the minimum value.
    *
@@ -366,10 +404,10 @@ public class Validator {
    * @throws IllegalArgumentException if minValue is null
    */
   public <T extends Number> Validator min(T value, T minValue, String name) {
-    return min(
+    return minInternal(
         value,
         minValue,
-        () -> formatMessage(value, name, String.format("must be at least %s", minValue), true));
+        () -> createError(value, name, String.format("must be at least %s", minValue), true));
   }
 
   /**
@@ -385,12 +423,7 @@ public class Validator {
    * @throws IllegalArgumentException if minValue is null
    */
   public <T extends Number> Validator min(T value, T minValue, Supplier<String> messageSupplier) {
-    if (minValue == null) {
-      throw new IllegalArgumentException("minValue cannot be null");
-    }
-
-    return assertFalse(
-        value == null || value.doubleValue() < minValue.doubleValue(), messageSupplier);
+    return minInternal(value, minValue, () -> createError(messageSupplier));
   }
 
   /**
@@ -408,6 +441,16 @@ public class Validator {
     return min(value, minValue, (String) null);
   }
 
+  private <T extends Number> Validator maxInternal(
+      T value, T maxValue, Supplier<ValidationError> errorSupplier) {
+    if (maxValue == null) {
+      throw new IllegalArgumentException("maxValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value == null || value.doubleValue() > maxValue.doubleValue(), errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is less than or equal to the maximum value.
    *
@@ -421,10 +464,10 @@ public class Validator {
    * @throws IllegalArgumentException if maxValue is null
    */
   public <T extends Number> Validator max(T value, T maxValue, String name) {
-    return max(
+    return maxInternal(
         value,
         maxValue,
-        () -> formatMessage(value, name, String.format("must be at most %s", maxValue), true));
+        () -> createError(value, name, String.format("must be at most %s", maxValue), true));
   }
 
   /**
@@ -440,12 +483,7 @@ public class Validator {
    * @throws IllegalArgumentException if maxValue is null
    */
   public <T extends Number> Validator max(T value, T maxValue, Supplier<String> messageSupplier) {
-    if (maxValue == null) {
-      throw new IllegalArgumentException("maxValue cannot be null");
-    }
-
-    return assertFalse(
-        value == null || value.doubleValue() > maxValue.doubleValue(), messageSupplier);
+    return maxInternal(value, maxValue, () -> createError(messageSupplier));
   }
 
   /**
@@ -463,6 +501,10 @@ public class Validator {
     return max(value, maxValue, (String) null);
   }
 
+  private Validator notEmptyInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified string is not null and not empty.
    *
@@ -473,7 +515,8 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(String value, String name) {
-    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
+    return notEmptyInternal(
+        value, () -> createError(value, name, "must not be null or empty", false));
   }
 
   /**
@@ -486,7 +529,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.isEmpty(), messageSupplier);
+    return notEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -501,6 +544,10 @@ public class Validator {
     return notEmpty(value, (String) null);
   }
 
+  private Validator notEmptyInternal(Collection<?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified collection is not null and not empty.
    *
@@ -511,7 +558,8 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Collection<?> value, String name) {
-    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
+    return notEmptyInternal(
+        value, () -> createError(value, name, "must not be null or empty", false));
   }
 
   /**
@@ -524,7 +572,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Collection<?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.isEmpty(), messageSupplier);
+    return notEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -539,6 +587,10 @@ public class Validator {
     return notEmpty(value, (String) null);
   }
 
+  private Validator notEmptyInternal(Map<?, ?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified map is not null and not empty.
    *
@@ -549,7 +601,8 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Map<?, ?> value, String name) {
-    return notEmpty(value, () -> formatMessage(value, name, "must not be null or empty", false));
+    return notEmptyInternal(
+        value, () -> createError(value, name, "must not be null or empty", false));
   }
 
   /**
@@ -562,7 +615,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.isEmpty(), messageSupplier);
+    return notEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -577,6 +630,10 @@ public class Validator {
     return notEmpty(value, (String) null);
   }
 
+  private Validator notBlankInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.trim().isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified string is not null, not empty, and not blank (contains
    * non-whitespace characters).
@@ -588,7 +645,7 @@ public class Validator {
    *     value is null, empty, or blank and fail-fast is enabled
    */
   public Validator notBlank(String value, String name) {
-    return notBlank(value, () -> formatMessage(value, name, "must not be blank", false));
+    return notBlankInternal(value, () -> createError(value, name, "must not be blank", false));
   }
 
   /**
@@ -602,7 +659,7 @@ public class Validator {
    *     value is null, empty, or blank and fail-fast is enabled
    */
   public Validator notBlank(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.trim().isEmpty(), messageSupplier);
+    return notBlankInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -618,6 +675,16 @@ public class Validator {
     return notBlank(value, (String) null);
   }
 
+  private Validator hasLengthInternal(
+      String value, int minLength, int maxLength, Supplier<ValidationError> errorSupplier) {
+    if (minLength > maxLength) {
+      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
+    }
+
+    return assertFalseInternal(
+        value == null || value.length() < minLength || value.length() > maxLength, errorSupplier);
+  }
+
   /**
    * Validates that the specified string has a length within the given range (inclusive).
    *
@@ -631,12 +698,12 @@ public class Validator {
    * @throws IllegalArgumentException if minLength is greater than maxLength
    */
   public Validator hasLength(String value, int minLength, int maxLength, String name) {
-    return hasLength(
+    return hasLengthInternal(
         value,
         minLength,
         maxLength,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must have length between %d and %d", minLength, maxLength),
@@ -657,12 +724,7 @@ public class Validator {
    */
   public Validator hasLength(
       String value, int minLength, int maxLength, Supplier<String> messageSupplier) {
-    if (minLength > maxLength) {
-      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
-    }
-
-    return assertFalse(
-        value == null || value.length() < minLength || value.length() > maxLength, messageSupplier);
+    return hasLengthInternal(value, minLength, maxLength, () -> createError(messageSupplier));
   }
 
   /**
@@ -680,6 +742,16 @@ public class Validator {
     return hasLength(value, minLength, maxLength, (String) null);
   }
 
+  private Validator hasSizeInternal(
+      Collection<?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalseInternal(
+        value == null || value.size() < minSize || value.size() > maxSize, errorSupplier);
+  }
+
   /**
    * Validates that the specified collection has a size within the given range (inclusive).
    *
@@ -693,12 +765,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator hasSize(Collection<?> value, int minSize, int maxSize, String name) {
-    return hasSize(
+    return hasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must have size between %d and %d", minSize, maxSize),
@@ -719,12 +791,7 @@ public class Validator {
    */
   public Validator hasSize(
       Collection<?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value == null || value.size() < minSize || value.size() > maxSize, messageSupplier);
+    return hasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -742,6 +809,16 @@ public class Validator {
     return hasSize(value, minSize, maxSize, (String) null);
   }
 
+  private Validator hasSizeInternal(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalseInternal(
+        value == null || value.size() < minSize || value.size() > maxSize, errorSupplier);
+  }
+
   /**
    * Validates that the specified map has a size within the given range (inclusive).
    *
@@ -755,12 +832,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator hasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
-    return hasSize(
+    return hasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must have size between %d and %d", minSize, maxSize),
@@ -781,12 +858,7 @@ public class Validator {
    */
   public Validator hasSize(
       Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value == null || value.size() < minSize || value.size() > maxSize, messageSupplier);
+    return hasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -804,6 +876,10 @@ public class Validator {
     return hasSize(value, minSize, maxSize, (String) null);
   }
 
+  private Validator isPositiveInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() <= 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is positive (greater than zero).
    *
@@ -814,7 +890,7 @@ public class Validator {
    *     value is null or not positive and fail-fast is enabled
    */
   public Validator isPositive(Number value, String name) {
-    return isPositive(value, () -> formatMessage(value, name, "must be positive", true));
+    return isPositiveInternal(value, () -> createError(value, name, "must be positive", true));
   }
 
   /**
@@ -827,7 +903,7 @@ public class Validator {
    *     value is null or not positive and fail-fast is enabled
    */
   public Validator isPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() <= 0, messageSupplier);
+    return isPositiveInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -842,6 +918,10 @@ public class Validator {
     return isPositive(value, (String) null);
   }
 
+  private Validator isNegativeInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() >= 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is negative (less than zero).
    *
@@ -852,7 +932,7 @@ public class Validator {
    *     value is null or not negative and fail-fast is enabled
    */
   public Validator isNegative(Number value, String name) {
-    return isNegative(value, () -> formatMessage(value, name, "must be negative", true));
+    return isNegativeInternal(value, () -> createError(value, name, "must be negative", true));
   }
 
   /**
@@ -865,7 +945,7 @@ public class Validator {
    *     value is null or not negative and fail-fast is enabled
    */
   public Validator isNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() >= 0, messageSupplier);
+    return isNegativeInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -880,6 +960,10 @@ public class Validator {
     return isNegative(value, (String) null);
   }
 
+  private Validator isNonNegativeInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() < 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is non-negative (greater than or equal to zero).
    *
@@ -890,7 +974,8 @@ public class Validator {
    *     value is null or negative and fail-fast is enabled
    */
   public Validator isNonNegative(Number value, String name) {
-    return isNonNegative(value, () -> formatMessage(value, name, "must be non-negative", true));
+    return isNonNegativeInternal(
+        value, () -> createError(value, name, "must be non-negative", true));
   }
 
   /**
@@ -903,7 +988,7 @@ public class Validator {
    *     value is null or negative and fail-fast is enabled
    */
   public Validator isNonNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() < 0, messageSupplier);
+    return isNonNegativeInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -918,6 +1003,10 @@ public class Validator {
     return isNonNegative(value, (String) null);
   }
 
+  private Validator isNonPositiveInternal(Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value == null || value.doubleValue() > 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is non-positive (less than or equal to zero).
    *
@@ -928,7 +1017,8 @@ public class Validator {
    *     value is null or positive and fail-fast is enabled
    */
   public Validator isNonPositive(Number value, String name) {
-    return isNonPositive(value, () -> formatMessage(value, name, "must be non-positive", true));
+    return isNonPositiveInternal(
+        value, () -> createError(value, name, "must be non-positive", true));
   }
 
   /**
@@ -941,7 +1031,7 @@ public class Validator {
    *     value is null or positive and fail-fast is enabled
    */
   public Validator isNonPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value == null || value.doubleValue() > 0, messageSupplier);
+    return isNonPositiveInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -956,6 +1046,16 @@ public class Validator {
     return isNonPositive(value, (String) null);
   }
 
+  private Validator matchesInternal(
+      String value, String regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+
+    return matchesInternal(
+        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), errorSupplier);
+  }
+
   /**
    * Validates that the specified string matches the given regular expression pattern.
    *
@@ -968,10 +1068,10 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator matches(String value, String regex, String name) {
-    return matches(
+    return matchesInternal(
         value,
         regex,
-        () -> formatMessage(value, name, String.format("must match pattern '%s'", regex), true));
+        () -> createError(value, name, String.format("must match pattern '%s'", regex), true));
   }
 
   /**
@@ -986,12 +1086,7 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator matches(String value, String regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
-    }
-
-    return matches(
-        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), messageSupplier);
+    return matchesInternal(value, regex, () -> createError(messageSupplier));
   }
 
   /**
@@ -1008,6 +1103,14 @@ public class Validator {
     return matches(value, regex, (String) null);
   }
 
+  private Validator matchesInternal(
+      String value, Pattern regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+    return assertFalseInternal(value == null || !regex.matcher(value).matches(), errorSupplier);
+  }
+
   /**
    * Validates that the specified string matches the given compiled regular expression pattern.
    *
@@ -1020,11 +1123,11 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator matches(String value, Pattern regex, String name) {
-    return matches(
+    return matchesInternal(
         value,
         regex,
         () ->
-            formatMessage(
+            createError(
                 value, name, String.format("must match pattern '%s'", regex.pattern()), true));
   }
 
@@ -1040,10 +1143,7 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator matches(String value, Pattern regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
-    }
-    return assertFalse(value == null || !regex.matcher(value).matches(), messageSupplier);
+    return matchesInternal(value, regex, () -> createError(messageSupplier));
   }
 
   /**
@@ -1058,6 +1158,18 @@ public class Validator {
    */
   public Validator matches(String value, Pattern regex) {
     return matches(value, regex, (String) null);
+  }
+
+  private <T extends Number> Validator nullOrInRangeInternal(
+      T value, T min, T max, Supplier<ValidationError> errorSupplier) {
+    if (min == null || max == null) {
+      throw new IllegalArgumentException("min and max cannot be null");
+    }
+
+    return assertFalseInternal(
+        value != null
+            && (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
+        errorSupplier);
   }
 
   /**
@@ -1075,12 +1187,12 @@ public class Validator {
    * @throws IllegalArgumentException if min or max are null
    */
   public <T extends Number> Validator nullOrInRange(T value, T min, T max, String name) {
-    return nullOrInRange(
+    return nullOrInRangeInternal(
         value,
         min,
         max,
         () ->
-            formatMessage(
+            createError(
                 value, name, String.format("must be null or between %s and %s", min, max), true));
   }
 
@@ -1101,14 +1213,7 @@ public class Validator {
    */
   public <T extends Number> Validator nullOrInRange(
       T value, T min, T max, Supplier<String> messageSupplier) {
-    if (min == null || max == null) {
-      throw new IllegalArgumentException("min and max cannot be null");
-    }
-
-    return assertFalse(
-        value != null
-            && (value.doubleValue() < min.doubleValue() || value.doubleValue() > max.doubleValue()),
-        messageSupplier);
+    return nullOrInRangeInternal(value, min, max, () -> createError(messageSupplier));
   }
 
   /**
@@ -1128,6 +1233,10 @@ public class Validator {
     return nullOrInRange(value, min, max, (String) null);
   }
 
+  private Validator nullOrNotEmptyInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified string is null or not empty. This method passes validation if the
    * value is null OR if it's not empty.
@@ -1139,8 +1248,8 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(String value, String name) {
-    return nullOrNotEmpty(
-        value, () -> formatMessage(value, name, "must be null or not empty", false));
+    return nullOrNotEmptyInternal(
+        value, () -> createError(value, name, "must be null or not empty", false));
   }
 
   /**
@@ -1154,7 +1263,7 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.isEmpty(), messageSupplier);
+    return nullOrNotEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1170,6 +1279,11 @@ public class Validator {
     return nullOrNotEmpty(value, (String) null);
   }
 
+  private Validator nullOrNotEmptyInternal(
+      Collection<?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified collection is null or not empty. This method passes validation if
    * the value is null OR if it's not empty.
@@ -1181,8 +1295,8 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(Collection<?> value, String name) {
-    return nullOrNotEmpty(
-        value, () -> formatMessage(value, name, "must be null or not empty", false));
+    return nullOrNotEmptyInternal(
+        value, () -> createError(value, name, "must be null or not empty", false));
   }
 
   /**
@@ -1196,7 +1310,7 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(Collection<?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.isEmpty(), messageSupplier);
+    return nullOrNotEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1212,6 +1326,11 @@ public class Validator {
     return nullOrNotEmpty(value, (String) null);
   }
 
+  private Validator nullOrNotEmptyInternal(
+      Map<?, ?> value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified map is null or not empty. This method passes validation if the
    * value is null OR if it's not empty.
@@ -1223,8 +1342,8 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(Map<?, ?> value, String name) {
-    return nullOrNotEmpty(
-        value, () -> formatMessage(value, name, "must be null or not empty", false));
+    return nullOrNotEmptyInternal(
+        value, () -> createError(value, name, "must be null or not empty", false));
   }
 
   /**
@@ -1238,7 +1357,7 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(Map<?, ?> value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.isEmpty(), messageSupplier);
+    return nullOrNotEmptyInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1254,6 +1373,10 @@ public class Validator {
     return nullOrNotEmpty(value, (String) null);
   }
 
+  private Validator nullOrNotBlankInternal(String value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.trim().isEmpty(), errorSupplier);
+  }
+
   /**
    * Validates that the specified string is null or not blank (contains non-whitespace characters).
    * This method passes validation if the value is null OR if it's not blank.
@@ -1265,8 +1388,8 @@ public class Validator {
    *     value is not null and blank and fail-fast is enabled
    */
   public Validator nullOrNotBlank(String value, String name) {
-    return nullOrNotBlank(
-        value, () -> formatMessage(value, name, "must be null or not blank", false));
+    return nullOrNotBlankInternal(
+        value, () -> createError(value, name, "must be null or not blank", false));
   }
 
   /**
@@ -1280,7 +1403,7 @@ public class Validator {
    *     value is not null and blank and fail-fast is enabled
    */
   public Validator nullOrNotBlank(String value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.trim().isEmpty(), messageSupplier);
+    return nullOrNotBlankInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1294,6 +1417,16 @@ public class Validator {
    */
   public Validator nullOrNotBlank(String value) {
     return nullOrNotBlank(value, (String) null);
+  }
+
+  private Validator nullOrHasLengthInternal(
+      String value, int minLength, int maxLength, Supplier<ValidationError> errorSupplier) {
+    if (minLength > maxLength) {
+      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
+    }
+
+    return assertFalseInternal(
+        value != null && (value.length() < minLength || value.length() > maxLength), errorSupplier);
   }
 
   /**
@@ -1311,12 +1444,12 @@ public class Validator {
    * @throws IllegalArgumentException if minLength is greater than maxLength
    */
   public Validator nullOrHasLength(String value, int minLength, int maxLength, String name) {
-    return nullOrHasLength(
+    return nullOrHasLengthInternal(
         value,
         minLength,
         maxLength,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format(
@@ -1340,13 +1473,7 @@ public class Validator {
    */
   public Validator nullOrHasLength(
       String value, int minLength, int maxLength, Supplier<String> messageSupplier) {
-    if (minLength > maxLength) {
-      throw new IllegalArgumentException("minLength cannot be greater than maxLength");
-    }
-
-    return assertFalse(
-        value != null && (value.length() < minLength || value.length() > maxLength),
-        messageSupplier);
+    return nullOrHasLengthInternal(value, minLength, maxLength, () -> createError(messageSupplier));
   }
 
   /**
@@ -1366,6 +1493,16 @@ public class Validator {
     return nullOrHasLength(value, minLength, maxLength, (String) null);
   }
 
+  private Validator nullOrHasSizeInternal(
+      Collection<?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalseInternal(
+        value != null && (value.size() < minSize || value.size() > maxSize), errorSupplier);
+  }
+
   /**
    * Validates that the specified collection is null or has a size within the given range
    * (inclusive). This method passes validation if the value is null OR if its size is within the
@@ -1381,12 +1518,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator nullOrHasSize(Collection<?> value, int minSize, int maxSize, String name) {
-    return nullOrHasSize(
+    return nullOrHasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must be null or have size between %d and %d", minSize, maxSize),
@@ -1409,12 +1546,7 @@ public class Validator {
    */
   public Validator nullOrHasSize(
       Collection<?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value != null && (value.size() < minSize || value.size() > maxSize), messageSupplier);
+    return nullOrHasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -1434,6 +1566,16 @@ public class Validator {
     return nullOrHasSize(value, minSize, maxSize, (String) null);
   }
 
+  private Validator nullOrHasSizeInternal(
+      Map<?, ?> value, int minSize, int maxSize, Supplier<ValidationError> errorSupplier) {
+    if (minSize > maxSize) {
+      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
+    }
+
+    return assertFalseInternal(
+        value != null && (value.size() < minSize || value.size() > maxSize), errorSupplier);
+  }
+
   /**
    * Validates that the specified map is null or has a size within the given range (inclusive). This
    * method passes validation if the value is null OR if its size is within the specified range.
@@ -1448,12 +1590,12 @@ public class Validator {
    * @throws IllegalArgumentException if minSize is greater than maxSize
    */
   public Validator nullOrHasSize(Map<?, ?> value, int minSize, int maxSize, String name) {
-    return nullOrHasSize(
+    return nullOrHasSizeInternal(
         value,
         minSize,
         maxSize,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must be null or have size between %d and %d", minSize, maxSize),
@@ -1475,12 +1617,7 @@ public class Validator {
    */
   public Validator nullOrHasSize(
       Map<?, ?> value, int minSize, int maxSize, Supplier<String> messageSupplier) {
-    if (minSize > maxSize) {
-      throw new IllegalArgumentException("minSize cannot be greater than maxSize");
-    }
-
-    return assertFalse(
-        value != null && (value.size() < minSize || value.size() > maxSize), messageSupplier);
+    return nullOrHasSizeInternal(value, minSize, maxSize, () -> createError(messageSupplier));
   }
 
   /**
@@ -1499,6 +1636,11 @@ public class Validator {
     return nullOrHasSize(value, minSize, maxSize, (String) null);
   }
 
+  private Validator nullOrIsPositiveInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() <= 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is null or positive (greater than zero). This method
    * passes validation if the value is null OR if it's positive.
@@ -1510,8 +1652,8 @@ public class Validator {
    *     value is not null and not positive and fail-fast is enabled
    */
   public Validator nullOrIsPositive(Number value, String name) {
-    return nullOrIsPositive(
-        value, () -> formatMessage(value, name, "must be null or positive", true));
+    return nullOrIsPositiveInternal(
+        value, () -> createError(value, name, "must be null or positive", true));
   }
 
   /**
@@ -1525,7 +1667,7 @@ public class Validator {
    *     value is not null and not positive and fail-fast is enabled
    */
   public Validator nullOrIsPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() <= 0, messageSupplier);
+    return nullOrIsPositiveInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1541,6 +1683,11 @@ public class Validator {
     return nullOrIsPositive(value, (String) null);
   }
 
+  private Validator nullOrIsNegativeInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() >= 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is null or negative (less than zero). This method
    * passes validation if the value is null OR if it's negative.
@@ -1552,8 +1699,8 @@ public class Validator {
    *     value is not null and not negative and fail-fast is enabled
    */
   public Validator nullOrIsNegative(Number value, String name) {
-    return nullOrIsNegative(
-        value, () -> formatMessage(value, name, "must be null or negative", true));
+    return nullOrIsNegativeInternal(
+        value, () -> createError(value, name, "must be null or negative", true));
   }
 
   /**
@@ -1567,7 +1714,7 @@ public class Validator {
    *     value is not null and not negative and fail-fast is enabled
    */
   public Validator nullOrIsNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() >= 0, messageSupplier);
+    return nullOrIsNegativeInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1583,6 +1730,16 @@ public class Validator {
     return nullOrIsNegative(value, (String) null);
   }
 
+  private Validator nullOrMatchesInternal(
+      String value, String regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+
+    return nullOrMatchesInternal(
+        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), errorSupplier);
+  }
+
   /**
    * Validates that the specified string is null or matches the given regular expression pattern.
    * This method passes validation if the value is null OR if it matches the pattern.
@@ -1596,11 +1753,11 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator nullOrMatches(String value, String regex, String name) {
-    return nullOrMatches(
+    return nullOrMatchesInternal(
         value,
         regex,
         () ->
-            formatMessage(
+            createError(
                 value, name, String.format("must be null or match pattern '%s'", regex), true));
   }
 
@@ -1617,12 +1774,7 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator nullOrMatches(String value, String regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
-    }
-
-    return nullOrMatches(
-        value, PATTERN_CACHE.computeIfAbsent(regex, k -> Pattern.compile(regex)), messageSupplier);
+    return nullOrMatchesInternal(value, regex, () -> createError(messageSupplier));
   }
 
   /**
@@ -1640,6 +1792,14 @@ public class Validator {
     return nullOrMatches(value, regex, (String) null);
   }
 
+  private Validator nullOrMatchesInternal(
+      String value, Pattern regex, Supplier<ValidationError> errorSupplier) {
+    if (regex == null) {
+      throw new IllegalArgumentException("regex pattern cannot be null");
+    }
+    return assertFalseInternal(value != null && !regex.matcher(value).matches(), errorSupplier);
+  }
+
   /**
    * Validates that the specified string is null or matches the given compiled regular expression
    * pattern. This method passes validation if the value is null OR if it matches the pattern.
@@ -1653,11 +1813,11 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator nullOrMatches(String value, Pattern regex, String name) {
-    return nullOrMatches(
+    return nullOrMatchesInternal(
         value,
         regex,
         () ->
-            formatMessage(
+            createError(
                 value,
                 name,
                 String.format("must be null or match pattern '%s'", regex.pattern()),
@@ -1677,10 +1837,7 @@ public class Validator {
    * @throws IllegalArgumentException if regex pattern is null
    */
   public Validator nullOrMatches(String value, Pattern regex, Supplier<String> messageSupplier) {
-    if (regex == null) {
-      throw new IllegalArgumentException("regex pattern cannot be null");
-    }
-    return assertFalse(value != null && !regex.matcher(value).matches(), messageSupplier);
+    return nullOrMatchesInternal(value, regex, () -> createError(messageSupplier));
   }
 
   /**
@@ -1698,6 +1855,10 @@ public class Validator {
     return nullOrMatches(value, regex, (String) null);
   }
 
+  private Validator isNullInternal(Object value, Supplier<ValidationError> errorSupplier) {
+    return assertTrueInternal(value == null, errorSupplier);
+  }
+
   /**
    * Validates that the specified value is null.
    *
@@ -1708,7 +1869,7 @@ public class Validator {
    *     value is not null and fail-fast is enabled
    */
   public Validator isNull(Object value, String name) {
-    return isNull(value, () -> formatMessage(value, name, "must be null", true));
+    return isNullInternal(value, () -> createError(value, name, "must be null", true));
   }
 
   /**
@@ -1721,7 +1882,7 @@ public class Validator {
    *     value is not null and fail-fast is enabled
    */
   public Validator isNull(Object value, Supplier<String> messageSupplier) {
-    return assertTrue(value == null, messageSupplier);
+    return isNullInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1736,6 +1897,11 @@ public class Validator {
     return isNull(value, (String) null);
   }
 
+  private Validator nullOrIsNonNegativeInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() < 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is null or non-negative (greater than or equal to
    * zero). This method passes validation if the value is null OR if it's non-negative.
@@ -1747,8 +1913,8 @@ public class Validator {
    *     value is not null and negative and fail-fast is enabled
    */
   public Validator nullOrIsNonNegative(Number value, String name) {
-    return nullOrIsNonNegative(
-        value, () -> formatMessage(value, name, "must be null or non-negative", true));
+    return nullOrIsNonNegativeInternal(
+        value, () -> createError(value, name, "must be null or non-negative", true));
   }
 
   /**
@@ -1762,7 +1928,7 @@ public class Validator {
    *     value is not null and negative and fail-fast is enabled
    */
   public Validator nullOrIsNonNegative(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() < 0, messageSupplier);
+    return nullOrIsNonNegativeInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1778,6 +1944,11 @@ public class Validator {
     return nullOrIsNonNegative(value, (String) null);
   }
 
+  private Validator nullOrIsNonPositiveInternal(
+      Number value, Supplier<ValidationError> errorSupplier) {
+    return assertFalseInternal(value != null && value.doubleValue() > 0, errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is null or non-positive (less than or equal to
    * zero). This method passes validation if the value is null OR if it's non-positive.
@@ -1789,8 +1960,8 @@ public class Validator {
    *     value is not null and positive and fail-fast is enabled
    */
   public Validator nullOrIsNonPositive(Number value, String name) {
-    return nullOrIsNonPositive(
-        value, () -> formatMessage(value, name, "must be null or non-positive", true));
+    return nullOrIsNonPositiveInternal(
+        value, () -> createError(value, name, "must be null or non-positive", true));
   }
 
   /**
@@ -1804,7 +1975,7 @@ public class Validator {
    *     value is not null and positive and fail-fast is enabled
    */
   public Validator nullOrIsNonPositive(Number value, Supplier<String> messageSupplier) {
-    return assertFalse(value != null && value.doubleValue() > 0, messageSupplier);
+    return nullOrIsNonPositiveInternal(value, () -> createError(messageSupplier));
   }
 
   /**
@@ -1818,6 +1989,16 @@ public class Validator {
    */
   public Validator nullOrIsNonPositive(Number value) {
     return nullOrIsNonPositive(value, (String) null);
+  }
+
+  private <T extends Number> Validator nullOrMinInternal(
+      T value, T minValue, Supplier<ValidationError> errorSupplier) {
+    if (minValue == null) {
+      throw new IllegalArgumentException("minValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value != null && value.doubleValue() < minValue.doubleValue(), errorSupplier);
   }
 
   /**
@@ -1835,12 +2016,11 @@ public class Validator {
    * @throws IllegalArgumentException if minValue is null
    */
   public <T extends Number> Validator nullOrMin(T value, T minValue, String name) {
-    return nullOrMin(
+    return nullOrMinInternal(
         value,
         minValue,
         () ->
-            formatMessage(
-                value, name, String.format("must be null or at least %s", minValue), true));
+            createError(value, name, String.format("must be null or at least %s", minValue), true));
   }
 
   /**
@@ -1860,12 +2040,7 @@ public class Validator {
    */
   public <T extends Number> Validator nullOrMin(
       T value, T minValue, Supplier<String> messageSupplier) {
-    if (minValue == null) {
-      throw new IllegalArgumentException("minValue cannot be null");
-    }
-
-    return assertFalse(
-        value != null && value.doubleValue() < minValue.doubleValue(), messageSupplier);
+    return nullOrMinInternal(value, minValue, () -> createError(messageSupplier));
   }
 
   /**
@@ -1885,6 +2060,16 @@ public class Validator {
     return nullOrMin(value, minValue, (String) null);
   }
 
+  private <T extends Number> Validator nullOrMaxInternal(
+      T value, T maxValue, Supplier<ValidationError> errorSupplier) {
+    if (maxValue == null) {
+      throw new IllegalArgumentException("maxValue cannot be null");
+    }
+
+    return assertFalseInternal(
+        value != null && value.doubleValue() > maxValue.doubleValue(), errorSupplier);
+  }
+
   /**
    * Validates that the specified numeric value is null or less than or equal to the maximum value.
    * This method passes validation if the value is null OR if it's at most the maximum value.
@@ -1899,12 +2084,11 @@ public class Validator {
    * @throws IllegalArgumentException if maxValue is null
    */
   public <T extends Number> Validator nullOrMax(T value, T maxValue, String name) {
-    return nullOrMax(
+    return nullOrMaxInternal(
         value,
         maxValue,
         () ->
-            formatMessage(
-                value, name, String.format("must be null or at most %s", maxValue), true));
+            createError(value, name, String.format("must be null or at most %s", maxValue), true));
   }
 
   /**
@@ -1923,12 +2107,7 @@ public class Validator {
    */
   public <T extends Number> Validator nullOrMax(
       T value, T maxValue, Supplier<String> messageSupplier) {
-    if (maxValue == null) {
-      throw new IllegalArgumentException("maxValue cannot be null");
-    }
-
-    return assertFalse(
-        value != null && value.doubleValue() > maxValue.doubleValue(), messageSupplier);
+    return nullOrMaxInternal(value, maxValue, () -> createError(messageSupplier));
   }
 
   /**

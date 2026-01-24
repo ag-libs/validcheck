@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"ConstantValue"})
@@ -1133,7 +1134,16 @@ class ValidatorTest {
     // Given - Validator with custom exception factory
     var validator =
         new Validator(
-            true, true, true, errors -> new IllegalArgumentException(String.join("; ", errors)));
+            true,
+            true,
+            true,
+            errors ->
+                new IllegalArgumentException(
+                    String.join(
+                        "; ",
+                        errors.stream()
+                            .map(ValidationError::toString)
+                            .collect(Collectors.toList()))));
 
     // When & Then - Verify custom exception is thrown
     assertThatThrownBy(() -> validator.notNull(null, "value"))
@@ -1148,7 +1158,14 @@ class ValidatorTest {
         new BatchValidator(
             true,
             true,
-            errors -> new IllegalArgumentException("Errors:\n- " + String.join("\n- ", errors)));
+            errors ->
+                new IllegalArgumentException(
+                    "Errors:\n- "
+                        + String.join(
+                            "\n- ",
+                            errors.stream()
+                                .map(ValidationError::toString)
+                                .collect(Collectors.toList()))));
 
     // When & Then - Verify custom formatting with multiple errors
     assertThatThrownBy(() -> validator.notNull(null, "field1").isPositive(-5, "field2").validate())

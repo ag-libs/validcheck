@@ -13,24 +13,27 @@ public class ValidationExceptionTest {
   void constructorAndGetErrorsMethodWithImmutableList() {
     // Given - Exception parameters
     String message = "Error 1; Error 2";
-    List<String> errors = List.of("Error 1", "Error 2");
+    List<ValidationError> errors =
+        List.of(new ValidationError(null, "Error 1"), new ValidationError(null, "Error 2"));
 
     // When - Create ValidationException
     ValidationException exception = new ValidationException(message, errors);
 
     // Then - Test getErrors() returns immutable list
-    List<String> returnedErrors = exception.getErrors();
-    assertThat(returnedErrors).containsExactly("Error 1", "Error 2");
+    List<ValidationError> returnedErrors = exception.getErrors();
+    assertThat(returnedErrors)
+        .containsExactly(
+            new ValidationError(null, "Error 1"), new ValidationError(null, "Error 2"));
 
     // Then - Verify list is immutable
-    assertThatThrownBy(() -> returnedErrors.add("Should fail"))
+    assertThatThrownBy(() -> returnedErrors.add(new ValidationError(null, "Should fail")))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
   void fillInStackTraceMethodWithDifferentConfigurations() {
     // Given - Test both fillStackTrace configurations
-    List<String> errors = List.of("Test error");
+    List<ValidationError> errors = List.of(new ValidationError(null, "Test error"));
 
     // When - Create exception with fillStackTrace = true
     ValidationException withStackTrace = ValidationException.create(true, "Message", errors);

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"ConstantValue"})
@@ -29,9 +30,9 @@ class BatchValidatorTest {
     assertThat(validator.getErrors()).hasSize(3);
     assertThat(validator.getErrors())
         .containsExactlyInAnyOrder(
-            "'name' must not be null",
-            "'email' must not be null or empty",
-            "'age' must be positive, but it was -5");
+            new ValidationError("name", "must not be null"),
+            new ValidationError("email", "must not be null or empty"),
+            new ValidationError("age", "must be positive, but it was -5"));
 
     // Then - Test isValid() method
     assertThat(validator.isValid()).isFalse();
@@ -72,11 +73,11 @@ class BatchValidatorTest {
     assertThat(combinedValidator.getErrors()).hasSize(5);
     assertThat(combinedValidator.getErrors())
         .containsExactlyInAnyOrder(
-            "'email' must not be null or empty",
-            "'username' must not be null",
-            "'password' must have length between 5 and 20, but it was 'ab'",
-            "'street' must not be blank",
-            "'zipCode' must be positive, but it was -1");
+            new ValidationError("email", "must not be null or empty"),
+            new ValidationError("username", "must not be null"),
+            new ValidationError("password", "must have length between 5 and 20, but it was 'ab'"),
+            new ValidationError("street", "must not be blank"),
+            new ValidationError("zipCode", "must be positive, but it was -1"));
 
     // When - Include validator with no errors
     BatchValidator emptyValidator = ValidCheck.check();
@@ -114,7 +115,8 @@ class BatchValidatorTest {
                         .matches(password, ".*\\d.*", "password")); // Should execute and fail
 
     // Then - Should only include errors from conditions that were true
-    List<String> errors = validator.getErrors();
+    List<String> errors =
+        validator.getErrors().stream().map(ValidationError::toString).collect(Collectors.toList());
     assertThat(errors).hasSize(5); // 1 base + 2 admin + 2 complex password
 
     // Verify admin mode validations were applied (isAdminMode=true)
@@ -260,23 +262,27 @@ class BatchValidatorTest {
     assertThat(validator.getErrors())
         .hasSize(17)
         .containsOnly(
-            "parameter must not be null",
-            "parameter must be between 1 and 50, but it was 100",
-            "parameter must not be null or empty",
-            "parameter must not be null or empty",
-            "parameter must not be null or empty",
-            "parameter must not be blank",
-            "parameter must have length between 1 and 100, but it was 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...'",
-            "parameter must have size between 2 and 5, but it was [a]",
-            "parameter must have size between 2 and 5, but it was {}",
-            "parameter must be positive, but it was -5",
-            "parameter must be negative, but it was 5",
-            "parameter must match pattern '^[a-z]+$', but it was 'ABC123'",
-            "parameter must match pattern '^[a-z]+$', but it was 'ABC123'",
-            "parameter must be non-negative, but it was -5",
-            "parameter must be non-positive, but it was 5",
-            "parameter must be at least 0, but it was -5",
-            "parameter must be at most 50, but it was 100");
+            new ValidationError(null, "parameter must not be null"),
+            new ValidationError(null, "parameter must be between 1 and 50, but it was 100"),
+            new ValidationError(null, "parameter must not be null or empty"),
+            new ValidationError(null, "parameter must not be null or empty"),
+            new ValidationError(null, "parameter must not be null or empty"),
+            new ValidationError(null, "parameter must not be blank"),
+            new ValidationError(
+                null,
+                "parameter must have length between 1 and 100, but it was 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...'"),
+            new ValidationError(null, "parameter must have size between 2 and 5, but it was [a]"),
+            new ValidationError(null, "parameter must have size between 2 and 5, but it was {}"),
+            new ValidationError(null, "parameter must be positive, but it was -5"),
+            new ValidationError(null, "parameter must be negative, but it was 5"),
+            new ValidationError(
+                null, "parameter must match pattern '^[a-z]+$', but it was 'ABC123'"),
+            new ValidationError(
+                null, "parameter must match pattern '^[a-z]+$', but it was 'ABC123'"),
+            new ValidationError(null, "parameter must be non-negative, but it was -5"),
+            new ValidationError(null, "parameter must be non-positive, but it was 5"),
+            new ValidationError(null, "parameter must be at least 0, but it was -5"),
+            new ValidationError(null, "parameter must be at most 50, but it was 100"));
     assertThat(validator.isValid()).isFalse();
 
     // When & Then - Validate should throw with all collected errors

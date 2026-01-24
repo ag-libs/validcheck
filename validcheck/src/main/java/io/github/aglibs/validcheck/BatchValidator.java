@@ -54,7 +54,7 @@ import java.util.regex.Pattern;
  *     .isPositive(age, "age");
  *
  * if (!validator.isValid()) {
- *     List<String> errors = validator.getErrors();
+ *     List<ValidationError> errors = validator.getErrors();
  *     // Handle errors without exception
  * }
  * }</pre>
@@ -83,7 +83,7 @@ public class BatchValidator extends Validator {
   protected BatchValidator(
       boolean includeValues,
       boolean fillStackTrace,
-      Function<List<String>, RuntimeException> exceptionFactory) {
+      Function<List<ValidationError>, RuntimeException> exceptionFactory) {
     super(includeValues, false, fillStackTrace, exceptionFactory);
   }
 
@@ -119,9 +119,9 @@ public class BatchValidator extends Validator {
    * Returns the list of validation error messages collected so far. This method allows inspection
    * of validation errors before or instead of calling {@link #validate()}.
    *
-   * @return a list of the current validation error messages
+   * @return a list of the current validation errors
    */
-  public List<String> getErrors() {
+  public List<ValidationError> getErrors() {
     return errors;
   }
 
