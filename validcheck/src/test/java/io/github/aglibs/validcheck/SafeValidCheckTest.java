@@ -52,4 +52,18 @@ class SafeValidCheckTest {
         .isInstanceOf(FastValidationException.class)
         .hasMessageContaining("'param' must not be null");
   }
+
+  @Test
+  void basicMethods() {
+    SafeValidCheck.requireNotNull("");
+    SafeValidCheck.assertTrue(true, "error2");
+
+    assertThatThrownBy(() -> SafeValidCheck.requireNotNull(null))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("parameter must not be null");
+
+    assertThatThrownBy(() -> SafeValidCheck.assertTrue(false, "error2"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("error2");
+  }
 }

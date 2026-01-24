@@ -71,4 +71,18 @@ class ValidCheckTest {
         .isInstanceOf(ValidationException.class)
         .hasMessage("Fail fast test");
   }
+
+  @Test
+  void basicMethods() {
+    ValidCheck.requireNotNull("", "error1");
+    ValidCheck.assertTrue(true, "error2");
+
+    assertThatThrownBy(() -> ValidCheck.requireNotNull(null, "name"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("'name' must not be null");
+
+    assertThatThrownBy(() -> ValidCheck.assertTrue(false, "error2"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("error2");
+  }
 }
