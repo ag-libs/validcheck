@@ -1,5 +1,6 @@
 package io.github.aglibs.validcheck;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -41,7 +42,9 @@ import java.util.Objects;
  * @see Validator
  * @see BatchValidator
  */
-public final class ValidationError {
+public final class ValidationError implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final String field;
   private final String message;

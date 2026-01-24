@@ -106,6 +106,10 @@ public class Validator {
   private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
   private static final int MAX_DISPLAYED_VALUE_LENGTH = 100;
 
+  // Error message constants
+  private static final String MSG_NOT_NULL_OR_EMPTY = "must not be null or empty";
+  private static final String MSG_NULL_OR_NOT_EMPTY = "must be null or not empty";
+
   /** Whether to include actual values in error messages. */
   protected final boolean includeValues;
 
@@ -743,8 +747,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(String value, String name) {
-    return notEmptyInternal(
-        value, () -> createError(value, name, "must not be null or empty", false));
+    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
   }
 
   /**
@@ -1016,8 +1019,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Collection<?> value, String name) {
-    return notEmptyInternal(
-        value, () -> createError(value, name, "must not be null or empty", false));
+    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
   }
 
   /**
@@ -1059,8 +1061,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Map<?, ?> value, String name) {
-    return notEmptyInternal(
-        value, () -> createError(value, name, "must not be null or empty", false));
+    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
   }
 
   /**
@@ -1646,7 +1647,7 @@ public class Validator {
    */
   public Validator nullOrNotEmpty(String value, String name) {
     return nullOrNotEmptyInternal(
-        value, () -> createError(value, name, "must be null or not empty", false));
+        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
   }
 
   /**
@@ -1941,7 +1942,7 @@ public class Validator {
    */
   public Validator nullOrNotEmpty(Collection<?> value, String name) {
     return nullOrNotEmptyInternal(
-        value, () -> createError(value, name, "must be null or not empty", false));
+        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
   }
 
   /**
@@ -1988,7 +1989,7 @@ public class Validator {
    */
   public Validator nullOrNotEmpty(Map<?, ?> value, String name) {
     return nullOrNotEmptyInternal(
-        value, () -> createError(value, name, "must be null or not empty", false));
+        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
   }
 
   /**
