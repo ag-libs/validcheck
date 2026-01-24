@@ -11,7 +11,6 @@ A Java validation library for runtime parameter validation with zero dependencie
 Maven:
 
 ```xml
-
 <dependency>
   <groupId>io.github.ag-libs.validcheck</groupId>
   <artifactId>validcheck</artifactId>
@@ -35,13 +34,13 @@ Use ValidCheck in record compact constructors to validate constructor parameters
 
 ```java
 public record User(String username, String email, int age) {
-  public User {
-    ValidCheck.require()
-        .notNull(username, "username")
-        .hasLength(username, 3, 20, "username")
-        .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
-        .inRange(age, 13, 120, "age");
-  }
+    public User {
+        ValidCheck.require()
+            .notNull(username, "username")
+            .hasLength(username, 3, 20, "username")
+            .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
+            .inRange(age, 13, 120, "age");
+    }
 }
 ```
 
@@ -49,15 +48,15 @@ public record User(String username, String email, int age) {
 
 ```java
 public record UserRegistration(String username, String email, String password) {
-  public UserRegistration {
-    ValidCheck.check()
-        .notNull(username, "username")
-        .hasLength(username, 3, 20, "username")
-        .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
-        .hasLength(password, 8, 100, "password")
-        .matches(password, ".*[A-Z].*", "password")
-        .validate();
-  }
+    public UserRegistration {
+        ValidCheck.check()
+            .notNull(username, "username")
+            .hasLength(username, 3, 20, "username")
+            .matches(email, "(?i)^[\\w._%+-]+@[\\w.-]+\\.[A-Z]{2,}$", "email")
+            .hasLength(password, 8, 100, "password")
+            .matches(password, ".*[A-Z].*", "password")
+            .validate();
+    }
 }
 ```
 
@@ -69,27 +68,17 @@ ValidCheck supports two validation strategies:
 
 ```java
 ValidCheck.require()
-    .
-
-notNull(value, "field")
-    .
-
-isPositive(number, "count");
+    .notNull(value, "field")
+    .isPositive(number, "count");
 ```
 
 **Batch** - Collects all errors before throwing:
 
 ```java
 ValidCheck.check()
-    .
-
-notNull(value, "field")
-    .
-
-isPositive(number, "count")
-    .
-
-validate();
+    .notNull(value, "field")
+    .isPositive(number, "count")
+    .validate();
 ```
 
 ## Validation Methods
@@ -97,66 +86,33 @@ validate();
 ```java
 // Null checks
 .notNull(value, "field")
-.
-
-isNull(value, "field")
-.
-
-notEmpty(text, "text")  
-.
-
-notBlank(text, "text")
+.isNull(value, "field")
+.notEmpty(text, "text")  
+.notBlank(text, "text")
 
 // Range validation  
-.
-
-inRange(number, min, max, "field")
-.
-
-isPositive(number, "field")        // > 0 (excludes zero)
-.
-
-isNegative(number, "field")        // < 0 (excludes zero)
-.
-
-isNonNegative(number, "field")     // >= 0 (includes zero)
-.
-
-isNonPositive(number, "field")     // <= 0 (includes zero)
-.
-
-min(number, minValue, "field")     // >= minValue (single bound)
-.
-
-max(number, maxValue, "field")     // <= maxValue (single bound)
+.inRange(number, min, max, "field")
+.isPositive(number, "field")        // > 0 (excludes zero)
+.isNegative(number, "field")        // < 0 (excludes zero)
+.isNonNegative(number, "field")     // >= 0 (includes zero)
+.isNonPositive(number, "field")     // <= 0 (includes zero)
+.min(number, minValue, "field")     // >= minValue (single bound)
+.max(number, maxValue, "field")     // <= maxValue (single bound)
 
 // String validation
-.
-
-hasLength(text, min, max, "field")
-.
-
-matches(text, pattern, "field")
+.hasLength(text, min, max, "field")
+.matches(text, pattern, "field")
 
 // Collection validation
-.
-
-hasSize(collection, min, max, "field")
-.
-
-notEmpty(collection, "field")
+.hasSize(collection, min, max, "field")
+.notEmpty(collection, "field")
 
 // Assertions
-.
-
-assertTrue(condition, "message")
-.
-
-assertFalse(condition, "message")
+.assertTrue(condition, "message")
+.assertFalse(condition, "message")
 ```
 
 Each validation method has three overloads:
-
 - Named: `.notNull(value, "fieldName")`
 - Message supplier: `.notNull(value, () -> "custom message")`
 - Parameter-less: `.notNull(value)` - uses "parameter" as field name
@@ -167,21 +123,11 @@ Validation methods return the validator instance for chaining:
 
 ```java
 ValidCheck.require()
-    .
-
-notNull(user, "user")
-    .
-
-notNull(user.getName(), "name")
-    .
-
-hasLength(user.getName(), 1,50,"name")
-    .
-
-matches(user.getEmail(),EMAIL_PATTERN, "email")
-    .
-
-isPositive(user.getAge(), "age");
+    .notNull(user, "user")
+    .notNull(user.getName(), "name")
+    .hasLength(user.getName(), 1, 50, "name")
+    .matches(user.getEmail(), EMAIL_PATTERN, "email")
+    .isPositive(user.getAge(), "age");
 ```
 
 ## Advanced Features
@@ -192,25 +138,15 @@ Use `when()` to apply validations conditionally:
 
 ```java
 ValidCheck.check()
-    .
-
-notNull(user, "user") 
-    .
-
-when(user !=null&&user.isAdmin(),
-
-v ->v.
-
-hasLength(user.getUsername(), 10,30,"admin username"))
-    .
-
-validate();
+    .notNull(user, "user") 
+    .when(user != null && user.isAdmin(), 
+          v -> v.hasLength(user.getUsername(), 10, 30, "admin username"))
+    .validate();
 ```
 
 ### Validating Optional Fields
 
-Use `nullOr*` methods to validate values that may be null. These methods pass if the value is null or satisfies the
-validation:
+Use `nullOr*` methods to validate values that may be null. These methods pass if the value is null or satisfies the validation:
 
 ```java
 public record UserProfile(
@@ -219,24 +155,23 @@ public record UserProfile(
     Integer age,        // Optional - can be null
     List<String> skills // Optional - can be null
 ) {
-  public UserProfile {
-    ValidCheck.check()
-        // Required fields
-        .notEmpty(username, "username")
-
-        // Optional fields - null is allowed, but if present must be valid
-        .nullOrNotBlank(bio, "bio")                    // null OR not blank
-        .nullOrHasLength(bio, 10, 500, "bio")          // null OR 10-500 chars
-        .nullOrInRange(age, 13, 120, "age")            // null OR 13-120
-        .nullOrNotEmpty(skills, "skills")              // null OR not empty
-        .nullOrHasSize(skills, 1, 10, "skills")        // null OR 1-10 items
-        .validate();
-  }
+    public UserProfile {
+        ValidCheck.check()
+            // Required fields
+            .notEmpty(username, "username")
+            
+            // Optional fields - null is allowed, but if present must be valid
+            .nullOrNotBlank(bio, "bio")                    // null OR not blank
+            .nullOrHasLength(bio, 10, 500, "bio")          // null OR 10-500 chars
+            .nullOrInRange(age, 13, 120, "age")            // null OR 13-120
+            .nullOrNotEmpty(skills, "skills")              // null OR not empty
+            .nullOrHasSize(skills, 1, 10, "skills")        // null OR 1-10 items
+            .validate();
+    }
 }
 ```
 
 Available conditional methods:
-
 - `nullOrNotEmpty()` - String, Collection, Map variants
 - `nullOrNotBlank()` - String validation
 - `nullOrHasLength()` - String length validation
@@ -253,11 +188,7 @@ Message suppliers are evaluated only when validation fails:
 
 ```java
 ValidCheck.require()
-    .
-
-assertTrue(isValid(data), ()->"Validation failed for complex data: "+data.
-
-toString());
+    .assertTrue(isValid(data), () -> "Validation failed for complex data: " + data.toString());
 ```
 
 ### Custom Error Messages
@@ -266,12 +197,8 @@ Use message suppliers to override default error messages:
 
 ```java
 ValidCheck.require()
-    .
-
-notNull(value, () ->"Custom field cannot be null")
-    .
-
-hasLength(text, 5,20,() ->"Custom field must be 5-20 characters");
+    .notNull(value, () -> "Custom field cannot be null")
+    .hasLength(text, 5, 20, () -> "Custom field must be 5-20 characters");
 ```
 
 ### Combining Validators
@@ -282,21 +209,13 @@ Use `include()` to combine multiple validation contexts:
 BatchValidator userValidator = ValidCheck.check()
     .notNull(username, "username");
 
-BatchValidator emailValidator = ValidCheck.check()
+BatchValidator emailValidator = ValidCheck.check() 
     .matches(email, EMAIL_PATTERN, "email");
 
-ValidCheck.
-
-check()
-    .
-
-include(userValidator)
-    .
-
-include(emailValidator)
-    .
-
-validate();
+ValidCheck.check()
+    .include(userValidator)
+    .include(emailValidator)
+    .validate();
 ```
 
 ## Parameter-less Methods
@@ -305,15 +224,9 @@ Validation methods can be called without a field name. The error message will us
 
 ```java
 ValidCheck.require()
-    .
-
-notNull(value)           // "parameter must not be null"
-    .
-
-isPositive(number)       // "parameter must be positive"
-    .
-
-hasLength(text, 5,20);  // "parameter must have length between 5 and 20"
+    .notNull(value)           // "parameter must not be null"
+    .isPositive(number)       // "parameter must be positive"
+    .hasLength(text, 5, 20);  // "parameter must have length between 5 and 20"
 ```
 
 ## Error Handling
@@ -323,46 +236,32 @@ All validation failures throw `ValidationException` which contains structured er
 ### Single Error (Fail-Fast)
 
 ```java
-try{
-    ValidCheck.require().
-
-isPositive(-5,"age");
-}catch(
-ValidationException e){
-    System.out.
-
-println(e.getMessage());
-// "'age' must be positive, but it was -5"
-
-List<ValidationError> errors = e.getErrors();
-// [ValidationError{field="age", message="must be positive, but it was -5"}]
+try {
+    ValidCheck.require().isPositive(-5, "age");
+} catch (ValidationException e) {
+    System.out.println(e.getMessage()); 
+    // "'age' must be positive, but it was -5"
+    
+    List<ValidationError> errors = e.getErrors();
+    // [ValidationError{field="age", message="must be positive, but it was -5"}]
 }
 ```
 
 ### Multiple Errors (Batch)
 
 ```java
-try{
+try {
     ValidCheck.check()
-        .
-
-notNull(null,"username")
-        .
-
-isPositive(-1,"age")
-        .
-
-validate();
-}catch(
-ValidationException e){
-    System.out.
-
-println(e.getMessage());
-// "'username' must not be null; 'age' must be positive, but it was -1"
-
-List<ValidationError> errors = e.getErrors();
-// [ValidationError{field="username", message="must not be null"}, 
-//  ValidationError{field="age", message="must be positive, but it was -1"}]
+        .notNull(null, "username")
+        .isPositive(-1, "age")
+        .validate();
+} catch (ValidationException e) {
+    System.out.println(e.getMessage());
+    // "'username' must not be null; 'age' must be positive, but it was -1"
+    
+    List<ValidationError> errors = e.getErrors();
+    // [ValidationError{field="username", message="must not be null"}, 
+    //  ValidationError{field="age", message="must be positive, but it was -1"}]
 }
 ```
 
@@ -371,37 +270,27 @@ List<ValidationError> errors = e.getErrors();
 `ValidationError` provides structured access to field names and error messages:
 
 ```java
-try{
+try {
     ValidCheck.check()
-        .
-
-notNull(null,"username")
-        .
-
-isPositive(-1,"age")
-        .
-
-validate();
-}catch(
-ValidationException e){
+        .notNull(null, "username")
+        .isPositive(-1, "age")
+        .validate();
+} catch (ValidationException e) {
     // Access structured error information
-    for(
-ValidationError error :e.
-
-getErrors()){
-String field = error.field();      // "username", "age"
-String message = error.message();  // "must not be null", "must be positive, but it was -1"
-String formatted = error.toString(); // "'username' must not be null"
+    for (ValidationError error : e.getErrors()) {
+        String field = error.field();      // "username", "age"
+        String message = error.message();  // "must not be null", "must be positive, but it was -1"
+        String formatted = error.toString(); // "'username' must not be null"
     }
-
-// Group errors by field for API responses
-Map<String, List<String>> errorsByField = e.getErrors().stream()
-    .filter(err -> err.field() != null)
-    .collect(Collectors.groupingBy(
-        ValidationError::field,
-        Collectors.mapping(ValidationError::message, Collectors.toList())
-    ));
-// {"username": ["must not be null"], "age": ["must be positive, but it was -1"]}
+    
+    // Group errors by field for API responses
+    Map<String, List<String>> errorsByField = e.getErrors().stream()
+        .filter(err -> err.field() != null)
+        .collect(Collectors.groupingBy(
+            ValidationError::field,
+            Collectors.mapping(ValidationError::message, Collectors.toList())
+        ));
+    // {"username": ["must not be null"], "age": ["must be positive, but it was -1"]}
 }
 ```
 
@@ -409,33 +298,29 @@ Map<String, List<String>> errorsByField = e.getErrors().stream()
 
 ### Custom Exception Types
 
-ValidCheck allows you to throw custom exception types instead of the default `ValidationException`. Simply pass an
-exception factory function to the `Validator` or `BatchValidator` constructor:
+ValidCheck allows you to throw custom exception types instead of the default `ValidationException`. Simply pass an exception factory function to the `Validator` or `BatchValidator` constructor:
 
 ```java
 // Throw IllegalArgumentException instead of ValidationException
 var validator = new Validator(true, true, true,
-        errors -> new IllegalArgumentException(
-            String.join("; ", errors.stream()
-                .map(ValidationError::toString)
-                .collect(Collectors.toList()))));
+    errors -> new IllegalArgumentException(
+        String.join("; ", errors.stream()
+            .map(ValidationError::toString)
+            .collect(Collectors.toList()))));
 
-validator.
-
-notNull(null,"value"); // throws IllegalArgumentException
+validator.notNull(null, "value"); // throws IllegalArgumentException
 
 // Custom formatting with structured error access
 var validator = new BatchValidator(true, true,
     errors -> {
-      String message = errors.stream()
-          .map(e -> e.field() + ": " + e.message())
-          .collect(Collectors.joining("\n- ", "Validation failed:\n- ", ""));
-      return new MyException(message);
+        String message = errors.stream()
+            .map(e -> e.field() + ": " + e.message())
+            .collect(Collectors.joining("\n- ", "Validation failed:\n- ", ""));
+        return new MyException(message);
     });
 ```
 
-This is useful when integrating with frameworks that expect specific exception types (Spring, Jakarta Bean Validation,
-etc.).
+This is useful when integrating with frameworks that expect specific exception types (Spring, Jakarta Bean Validation, etc.).
 
 ### Custom Validation Methods
 
@@ -443,13 +328,13 @@ You can extend the `Validator` and `BatchValidator` classes to add domain-specif
 
 ```java
 public class MyValidator extends Validator {
-  protected MyValidator() {
-    super(true, true, true, null);
-  }
-
-  public MyValidator isValidEmail(String email, String name) {
-    return (MyValidator) matches(email, EMAIL_PATTERN, name);
-  }
+    protected MyValidator() {
+        super(true, true, true, null);
+    }
+    
+    public MyValidator isValidEmail(String email, String name) {
+        return (MyValidator) matches(email, EMAIL_PATTERN, name);
+    }
 }
 ```
 
@@ -459,9 +344,7 @@ See the Javadoc in the source code for detailed examples.
 
 Complete examples available in the [examples module](validcheck-examples/):
 
-- [User Registration](validcheck-examples/src/main/java/io/github/aglibs/validcheck/example/UserRegistrationExample.java) -
-  Record validation with batch processing, conditional validation for optional fields, and single-bound validation
-  examples
+- [User Registration](validcheck-examples/src/main/java/io/github/aglibs/validcheck/example/UserRegistrationExample.java) - Record validation with batch processing, conditional validation for optional fields, and single-bound validation examples
 
 ## Requirements
 
