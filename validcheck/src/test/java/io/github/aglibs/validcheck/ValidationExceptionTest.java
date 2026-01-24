@@ -55,16 +55,15 @@ public class ValidationExceptionTest {
     ValidationError error2 = new ValidationError(null, "general error");
     ValidationError error3 = new ValidationError("username", "must not be null"); // For hashCode
 
-    // When & Then - Test field accessor
-    assertThat(error1.field()).isEqualTo("username");
-    assertThat(error2.field()).isNull();
+    // When & Then - Test error1 accessors and hashCode
+    assertThat(error1)
+        .extracting(ValidationError::field, ValidationError::message)
+        .containsExactly("username", "must not be null");
+    assertThat(error1).hasSameHashCodeAs(error3).doesNotHaveSameHashCodeAs(error2);
 
-    // When & Then - Test message accessor
-    assertThat(error1.message()).isEqualTo("must not be null");
-    assertThat(error2.message()).isEqualTo("general error");
-
-    // When & Then - Test hashCode
-    assertThat(error1).hasSameHashCodeAs(error3);
-    assertThat(error1).doesNotHaveSameHashCodeAs(error2);
+    // When & Then - Test error2 field accessor
+    assertThat(error2)
+        .extracting(ValidationError::field, ValidationError::message)
+        .containsExactly(null, "general error");
   }
 }
