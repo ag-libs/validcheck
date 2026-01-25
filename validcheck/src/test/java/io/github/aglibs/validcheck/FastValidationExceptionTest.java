@@ -45,4 +45,41 @@ class FastValidationExceptionTest {
     assertThat(exceptionSafe.isSafeForClient()).isTrue();
     assertThat(exceptionUnsafe.isSafeForClient()).isFalse();
   }
+
+  @Test
+  void constructorWithFieldNameMessageAndSafeForClient() {
+    // Given
+    String fieldName = "email";
+    String message = "invalid format";
+
+    // When
+    FastValidationException exception = new FastValidationException(fieldName, message, true);
+
+    // Then
+    assertThat(exception.getMessage()).isEqualTo(message);
+    assertThat(exception.isSafeForClient()).isTrue();
+    assertThat(exception.getStackTrace()).isEmpty();
+    assertThat(exception.getErrors()).hasSize(1);
+    assertThat(exception.getErrors().get(0))
+        .extracting(ValidationError::field, ValidationError::message)
+        .containsExactly(fieldName, message);
+  }
+
+  @Test
+  void constructorWithMessageAndSafeForClient() {
+    // Given
+    String message = "validation failed";
+
+    // When
+    FastValidationException exception = new FastValidationException(message, false);
+
+    // Then
+    assertThat(exception.getMessage()).isEqualTo(message);
+    assertThat(exception.isSafeForClient()).isFalse();
+    assertThat(exception.getStackTrace()).isEmpty();
+    assertThat(exception.getErrors()).hasSize(1);
+    assertThat(exception.getErrors().get(0))
+        .extracting(ValidationError::field, ValidationError::message)
+        .containsExactly(null, message);
+  }
 }

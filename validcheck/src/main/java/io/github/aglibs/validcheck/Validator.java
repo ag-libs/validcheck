@@ -196,7 +196,7 @@ public class Validator {
    * the factory.
    *
    * @return the exception to throw, must not be null
-   * @since 0.9.9
+   * @since 1.0.0
    */
   protected RuntimeException createException() {
     if (exceptionFactory != null) {

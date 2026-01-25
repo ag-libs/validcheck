@@ -6,7 +6,7 @@ package io.github.aglibs.validcheck;
  *
  * <p>Methods with "Fast" suffix create exceptions without stack traces.
  *
- * @since 0.9.10
+ * @since 1.0.0
  * @see ValidCheck
  * @see FastValidationException
  */

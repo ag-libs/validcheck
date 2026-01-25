@@ -31,11 +31,45 @@ public class ValidationException extends RuntimeException {
    * @param errors the list of individual validation errors
    * @param safeForClient whether it is safe to include error messages in API responses
    */
-  protected ValidationException(
-      String message, List<ValidationError> errors, boolean safeForClient) {
+  public ValidationException(String message, List<ValidationError> errors, boolean safeForClient) {
     super(message);
     this.errors = Collections.unmodifiableList(errors);
     this.safeForClient = safeForClient;
+  }
+
+  /**
+   * Constructs a new ValidationException with the specified configuration.
+   *
+   * @param message the detail message combining all validation errors
+   * @param name the name of the field
+   * @param safeForClient whether it is safe to include error messages in API responses
+   * @param cause the cause of this exception
+   */
+  public ValidationException(String name, String message, boolean safeForClient, Exception cause) {
+    super(message, cause);
+    this.errors = List.of(new ValidationError(name, message));
+    this.safeForClient = safeForClient;
+  }
+
+  /**
+   * Constructs a new ValidationException with the specified configuration.
+   *
+   * @param message the detail message combining all validation errors
+   * @param safeForClient whether it is safe to include error messages in API responses
+   */
+  public ValidationException(String message, boolean safeForClient) {
+    this(null, message, safeForClient, null);
+  }
+
+  /**
+   * Constructs a new ValidationException with the specified configuration.
+   *
+   * @param message the detail message combining all validation errors
+   * @param safeForClient whether it is safe to include error messages in API responses
+   * @param cause the cause of this exception
+   */
+  public ValidationException(String message, boolean safeForClient, Exception cause) {
+    this(null, message, safeForClient, cause);
   }
 
   /**
