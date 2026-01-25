@@ -37,7 +37,7 @@ import java.util.Objects;
  * }
  * }</pre>
  *
- * @since 0.9.10
+ * @since 1.0.0
  * @see ValidationException
  * @see Validator
  * @see BatchValidator

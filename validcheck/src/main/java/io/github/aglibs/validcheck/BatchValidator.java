@@ -72,19 +72,19 @@ import java.util.regex.Pattern;
 public class BatchValidator extends Validator {
 
   /**
-   * Constructs a new BatchValidator with the specified configuration.
+   * Constructs a new BatchValidator.
    *
-   * @param includeValues whether to include actual values in error messages for debugging
-   * @param fillStackTrace whether to fill stack traces in thrown exceptions (only applies when
-   *     using default ValidationException)
-   * @param exceptionFactory factory function to create exceptions from error list; if null, uses
-   *     default ValidationException
+   * @param safeForClient whether error messages are safe for client/API responses (true = exclude
+   *     values, false = include values)
+   * @param fillStackTrace whether to fill stack traces in thrown exceptions
+   * @param exceptionFactory factory function to create exceptions; if null, uses default
+   *     ValidationException
    */
   protected BatchValidator(
-      boolean includeValues,
+      boolean safeForClient,
       boolean fillStackTrace,
       Function<List<ValidationError>, RuntimeException> exceptionFactory) {
-    super(includeValues, false, fillStackTrace, exceptionFactory);
+    super(safeForClient, false, fillStackTrace, exceptionFactory);
   }
 
   /**

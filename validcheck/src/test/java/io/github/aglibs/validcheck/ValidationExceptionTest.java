@@ -17,7 +17,7 @@ public class ValidationExceptionTest {
         List.of(new ValidationError(null, "Error 1"), new ValidationError(null, "Error 2"));
 
     // When - Create ValidationException
-    ValidationException exception = new ValidationException(message, errors);
+    ValidationException exception = new ValidationException(message, errors, true);
 
     // Then - Test getErrors() returns immutable list
     List<ValidationError> returnedErrors = exception.getErrors();
@@ -28,6 +28,23 @@ public class ValidationExceptionTest {
     // Then - Verify list is immutable
     assertThatThrownBy(() -> returnedErrors.add(new ValidationError(null, "Should fail")))
         .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  void shouldStoreAndReturnIncludeValueFlag() {
+    // Given - Exception with safeForClient set to true (excludes values)
+    ValidationException exceptionSafe =
+        new ValidationException("Error", List.of(new ValidationError(null, "Error")), true);
+
+    // Then - isSafeForClient() should return true
+    assertThat(exceptionSafe.isSafeForClient()).isTrue();
+
+    // Given - Exception with safeForClient set to false (includes values)
+    ValidationException exceptionUnsafe =
+        new ValidationException("Error", List.of(new ValidationError(null, "Error")), false);
+
+    // Then - isSafeForClient() should return false
+    assertThat(exceptionUnsafe.isSafeForClient()).isFalse();
   }
 
   @Test
@@ -47,5 +64,60 @@ public class ValidationExceptionTest {
     assertThat(error2)
         .extracting(ValidationError::field, ValidationError::message)
         .containsExactly(null, "general error");
+  }
+
+  @Test
+  void constructorWithFieldNameMessageAndSafeForClient() {
+    // Given
+    String fieldName = "username";
+    String message = "must not be empty";
+
+    // When
+    ValidationException exception = new ValidationException(fieldName, message, true, null);
+
+    // Then
+    assertThat(exception.getMessage()).isEqualTo(message);
+    assertThat(exception.isSafeForClient()).isTrue();
+    assertThat(exception.getErrors()).hasSize(1);
+    assertThat(exception.getErrors().get(0))
+        .extracting(ValidationError::field, ValidationError::message)
+        .containsExactly(fieldName, message);
+    assertThat(exception.getCause()).isNull();
+  }
+
+  @Test
+  void constructorWithMessageAndSafeForClient() {
+    // Given
+    String message = "validation failed";
+
+    // When
+    ValidationException exception = new ValidationException(message, true);
+
+    // Then
+    assertThat(exception.getMessage()).isEqualTo(message);
+    assertThat(exception.isSafeForClient()).isTrue();
+    assertThat(exception.getErrors()).hasSize(1);
+    assertThat(exception.getErrors().get(0))
+        .extracting(ValidationError::field, ValidationError::message)
+        .containsExactly(null, message);
+  }
+
+  @Test
+  void constructorWithMessageSafeForClientAndCause() {
+    // Given
+    String message = "validation failed";
+    Exception cause = new IllegalArgumentException("root cause");
+
+    // When
+    ValidationException exception = new ValidationException(message, false, cause);
+
+    // Then
+    assertThat(exception.getMessage()).isEqualTo(message);
+    assertThat(exception.isSafeForClient()).isFalse();
+    assertThat(exception.getCause()).isEqualTo(cause);
+    assertThat(exception.getErrors()).hasSize(1);
+    assertThat(exception.getErrors().get(0))
+        .extracting(ValidationError::field, ValidationError::message)
+        .containsExactly(null, message);
   }
 }

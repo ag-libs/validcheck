@@ -85,4 +85,21 @@ class ValidCheckTest {
         .isInstanceOf(ValidationException.class)
         .hasMessage("error2");
   }
+
+  @Test
+  void requireAndCheckShouldIncludeStackTraces() {
+    // Given - ValidCheck methods should always include stack traces
+
+    // When & Then - require() includes stack trace
+    assertThatThrownBy(() -> ValidCheck.require().notNull(null, "field"))
+        .isInstanceOf(ValidationException.class)
+        .satisfies(e -> assertThat(e.getStackTrace()).isNotEmpty());
+
+    // When & Then - check() includes stack trace
+    BatchValidator validator = ValidCheck.check();
+    validator.notNull(null, "field");
+    assertThatThrownBy(validator::validate)
+        .isInstanceOf(ValidationException.class)
+        .satisfies(e -> assertThat(e.getStackTrace()).isNotEmpty());
+  }
 }

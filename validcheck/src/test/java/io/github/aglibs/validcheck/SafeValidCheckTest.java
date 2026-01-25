@@ -14,9 +14,10 @@ class SafeValidCheckTest {
 
     // When & Then - Error message should NOT contain the sensitive value
     assertThatThrownBy(() -> validator().hasLength(sensitiveData, 50, 100, "password"))
-        .isInstanceOf(FastValidationException.class)
+        .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'password' must have length between 50 and 100")
-        .hasMessageNotContaining(sensitiveData); // Value NOT included
+        .hasMessageNotContaining(sensitiveData) // Value NOT included
+        .satisfies(e -> assertThat(e.getStackTrace()).isNotEmpty()); // Has stack trace
   }
 
   private static Validator validator() {
@@ -24,11 +25,21 @@ class SafeValidCheckTest {
   }
 
   @Test
-  void requireShouldThrowFastValidationException() {
-    // Given - SafeValidCheck uses fast exceptions
+  void requireShouldThrowValidationExceptionWithStackTrace() {
+    // Given - SafeValidCheck uses normal exceptions by default
 
     // When & Then
     assertThatThrownBy(() -> SafeValidCheck.require().notNull(null, "field"))
+        .isInstanceOf(ValidationException.class)
+        .satisfies(e -> assertThat(e.getStackTrace()).isNotEmpty());
+  }
+
+  @Test
+  void requireFastShouldThrowFastValidationExceptionWithoutStackTrace() {
+    // Given - SafeValidCheck.requireFast() uses fast exceptions
+
+    // When & Then
+    assertThatThrownBy(() -> SafeValidCheck.requireFast().notNull(null, "field"))
         .isInstanceOf(FastValidationException.class)
         .satisfies(e -> assertThat(e.getStackTrace()).isEmpty());
   }
@@ -44,16 +55,34 @@ class SafeValidCheckTest {
 
     // Then - Should fail without exposing the value
     assertThatThrownBy(validator::validate)
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'data' must have length between 50 and 100")
+        .hasMessageNotContaining(sensitiveValue)
+        .satisfies(e -> assertThat(e.getStackTrace()).isNotEmpty()); // Has stack trace
+  }
+
+  @Test
+  void checkFastShouldCollectErrorsWithoutStackTrace() {
+    // Given
+    BatchValidator validator = SafeValidCheck.checkFast();
+    String sensitiveValue = "sensitive-data";
+
+    // When
+    validator.hasLength(sensitiveValue, 50, 100, "data");
+
+    // Then - Should fail without exposing the value and without stack trace
+    assertThatThrownBy(validator::validate)
         .isInstanceOf(FastValidationException.class)
         .hasMessageContaining("'data' must have length between 50 and 100")
-        .hasMessageNotContaining(sensitiveValue);
+        .hasMessageNotContaining(sensitiveValue)
+        .satisfies(e -> assertThat(e.getStackTrace()).isEmpty()); // No stack trace
   }
 
   @Test
   void requireNotNullShouldWorkAsConvenience() {
     // When & Then
     assertThatThrownBy(() -> SafeValidCheck.requireNotNull(null, "param"))
-        .isInstanceOf(FastValidationException.class)
+        .isInstanceOf(ValidationException.class)
         .hasMessageContaining("'param' must not be null");
   }
 

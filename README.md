@@ -84,23 +84,30 @@ ValidCheck.check()
 ### SafeValidCheck - Secure Validation
 
 For production environments where input values may contain sensitive data, use
-`SafeValidCheck`. It provides the same API but excludes values from error messages and uses
-fast exceptions without stack traces:
+`SafeValidCheck`. It provides the same API but excludes values from error messages.
+
+Regular methods create exceptions with stack traces. Methods with "Fast" suffix create
+exceptions without stack traces:
 
 ```java
-// Validates without exposing password in error messages
+// Validates without exposing password in error messages with stack traces
 SafeValidCheck.require()
     .notNull(password, "password")
     .hasLength(password, 8, 100, "password");
 // Error: "'password' must have length between 8 and 100"
 // (actual password value NOT included)
+
+// Fast validation without stack traces for high-throughput scenarios
+SafeValidCheck.requireFast()
+    .notNull(apiKey, "apiKey")
+    .hasLength(apiKey, 32, 64, "apiKey");
 ```
 
 Use `SafeValidCheck` when validating passwords, tokens, API keys, or any sensitive data to
 prevent information leaks in logs and error messages. It also protects against XSS attacks
 when input values contain HTML/JavaScript code that could be interpreted by browsers in error
-responses. Recommended for high-throughput API request validation where fast exception
-creation improves performance.
+responses. Use the "Fast" suffix methods for high-throughput API request validation where
+exception creation without stack traces improves performance.
 
 ## Validation Methods
 
