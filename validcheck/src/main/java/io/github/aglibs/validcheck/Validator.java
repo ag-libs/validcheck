@@ -174,7 +174,7 @@ public class Validator {
       var formattedValue =
           value instanceof String ? String.format("'%s'", stringValue) : stringValue;
       // limit the string length of string representation of the value
-      return new ValidationError(name, String.format("%s, but it was %s", error, formattedValue));
+      return new ValidationError(name, error + String.format(", but it was %s", formattedValue));
     }
 
     return new ValidationError(name, error);
