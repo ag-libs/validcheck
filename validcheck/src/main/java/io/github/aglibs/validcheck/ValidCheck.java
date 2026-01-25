@@ -4,15 +4,11 @@ package io.github.aglibs.validcheck;
  * Main entry point for the ValidCheck validation library. Provides static factory methods to create
  * validators for parameter validation.
  *
- * <p>This class offers convenient methods for common validation scenarios:
- *
- * <ul>
- *   <li>Batch validation with {@link #check()}
- *   <li>Single validation with fail-fast behavior using {@link #require()}
- *   <li>Quick null checks with {@link #requireNotNull(Object, String)}
- * </ul>
+ * <p>This class creates validators that include actual values in error messages and use stack
+ * traces.
  *
  * @since 1.0.0
+ * @see SafeValidCheck
  */
 public final class ValidCheck {
 
@@ -20,30 +16,30 @@ public final class ValidCheck {
   private ValidCheck() {}
 
   /**
-   * Creates a new batch validator that collects all validation errors before throwing. This allows
-   * multiple validation failures to be reported at once.
+   * Creates a new batch validator that collects all validation errors before throwing. Includes
+   * values in error messages and uses exceptions with stack traces.
    *
-   * @return a new {@link BatchValidator} instance configured to include values
+   * @return a new {@link BatchValidator} instance
    * @see BatchValidator
    */
   public static BatchValidator check() {
-    return new BatchValidator(true, true, null);
+    return new BatchValidator(false, true, null);
   }
 
   /**
    * Creates a new validator with fail-fast behavior. Throws a {@link ValidationException}
-   * immediately upon the first validation failure.
+   * immediately upon the first validation failure. Includes values in error messages and stack
+   * traces.
    *
-   * @return a new {@link Validator} instance configured to include values and fail-fast
+   * @return a new {@link Validator} instance
    * @see Validator
    */
   public static Validator require() {
-    return new Validator(true, true, true, null);
+    return new Validator(false, true, true, null);
   }
 
   /**
-   * Validates that the specified value is not null. This is a convenience method equivalent to
-   * {@code require().notNull(value, name)}.
+   * Validates that the specified value is not null.
    *
    * @param value the value to check for null
    * @param name the name of the parameter being validated (used in error messages)
@@ -55,8 +51,7 @@ public final class ValidCheck {
   }
 
   /**
-   * Validates that the specified value is not null. This is a convenience method equivalent to
-   * {@code require().notNull(value)}.
+   * Validates that the specified value is not null.
    *
    * @param value the value to check for null
    * @throws ValidationException if the value is null
@@ -67,8 +62,7 @@ public final class ValidCheck {
   }
 
   /**
-   * Validates that the specified condition is true. This is a convenience method equivalent to
-   * {@code require().assertTrue(condition, message)}.
+   * Validates that the specified condition is true.
    *
    * @param condition the condition to evaluate
    * @param message the error message to use if the condition is false

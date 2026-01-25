@@ -54,10 +54,10 @@ import java.util.stream.Collectors;
  *     return new MyValidator(true, false, false, null);
  *   }
  *
- *   protected MyValidator(boolean includeValues, boolean failFast,
+ *   protected MyValidator(boolean safeForClient, boolean failFast,
  *                          boolean fillStackTrace,
  *                          Function<List<String>, RuntimeException> exceptionFactory) {
- *     super(includeValues, failFast, fillStackTrace, exceptionFactory);
+ *     super(safeForClient, failFast, fillStackTrace, exceptionFactory);
  *   }
  *
  *   // Add custom validation methods
@@ -110,8 +110,11 @@ public class Validator {
   private static final String MSG_NOT_NULL_OR_EMPTY = "must not be null or empty";
   private static final String MSG_NULL_OR_NOT_EMPTY = "must be null or not empty";
 
-  /** Whether to include actual values in error messages. */
-  protected final boolean includeValues;
+  /**
+   * Whether error messages are safe for client/API responses. When true, values are not included in
+   * error messages.
+   */
+  protected final boolean safeForClient;
 
   /** Whether to throw immediately on first validation failure. */
   protected final boolean failFast;
@@ -127,21 +130,21 @@ public class Validator {
   protected final List<ValidationError> errors;
 
   /**
-   * Constructs a new Validator with the specified configuration.
+   * Constructs a new Validator.
    *
-   * @param includeValues whether to include actual values in error messages for debugging
-   * @param failFast whether to throw immediately on first validation failure or collect all errors
-   * @param fillStackTrace whether to fill stack traces in thrown exceptions (only applies when
-   *     using default ValidationException; ignored if exceptionFactory is provided)
-   * @param exceptionFactory factory function to create exceptions from error list; if null, uses
-   *     default ValidationException
+   * @param safeForClient whether error messages are safe for client/API responses (true = exclude
+   *     values, false = include values)
+   * @param failFast whether to throw immediately on first validation failure
+   * @param fillStackTrace whether to fill stack traces in thrown exceptions
+   * @param exceptionFactory factory function to create exceptions; if null, uses default
+   *     ValidationException
    */
   protected Validator(
-      boolean includeValues,
+      boolean safeForClient,
       boolean failFast,
       boolean fillStackTrace,
       Function<List<ValidationError>, RuntimeException> exceptionFactory) {
-    this.includeValues = includeValues;
+    this.safeForClient = safeForClient;
     this.failFast = failFast;
     this.fillStackTrace = fillStackTrace;
     this.exceptionFactory = exceptionFactory;
@@ -166,12 +169,12 @@ public class Validator {
       Object value, String name, String message, boolean includeValue) {
     var error = name == null ? String.format("parameter %s", message) : message;
 
-    if (this.includeValues && includeValue && value != null) {
+    if (!safeForClient && includeValue && value != null) {
       var stringValue = valueToString(value);
       var formattedValue =
           value instanceof String ? String.format("'%s'", stringValue) : stringValue;
       // limit the string length of string representation of the value
-      return new ValidationError(name, error + String.format(", but it was %s", formattedValue));
+      return new ValidationError(name, String.format("%s, but it was %s", error, formattedValue));
     }
 
     return new ValidationError(name, error);
@@ -202,8 +205,8 @@ public class Validator {
     final var message =
         errors.stream().map(ValidationError::toString).collect(Collectors.joining("; "));
     return fillStackTrace
-        ? new ValidationException(message, errors)
-        : new FastValidationException(message, errors);
+        ? new ValidationException(message, errors, safeForClient)
+        : new FastValidationException(message, errors, safeForClient);
   }
 
   // ========================================
