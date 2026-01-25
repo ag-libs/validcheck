@@ -4,7 +4,8 @@ package io.github.aglibs.validcheck;
  * Entry point for ValidCheck validation that does not include input values in error messages.
  * Provides static factory methods to create validators that exclude values from error messages.
  *
- * <p>Methods with "Fast" suffix create exceptions without stack traces.
+ * <p>Regular methods create exceptions with stack traces. Methods with "Fast" suffix create
+ * exceptions without stack traces.
  *
  * @since 1.0.0
  * @see ValidCheck
@@ -17,7 +18,7 @@ public final class SafeValidCheck {
 
   /**
    * Creates a new batch validator that collects all validation errors before throwing. Does not
-   * include input values in error messages. Uses exceptions with stack traces.
+   * include input values in error messages with stack traces.
    *
    * @return a new {@link BatchValidator} instance
    * @see BatchValidator
@@ -29,7 +30,7 @@ public final class SafeValidCheck {
 
   /**
    * Creates a new batch validator that collects all validation errors before throwing. Does not
-   * include input values in error messages. Uses fast exceptions without stack traces.
+   * include input values in error messages without stack traces.
    *
    * @return a new {@link BatchValidator} instance
    * @see BatchValidator
@@ -41,8 +42,8 @@ public final class SafeValidCheck {
 
   /**
    * Creates a new validator with fail-fast behavior. Throws a {@link ValidationException}
-   * immediately upon the first validation failure. Does not include input values in error messages.
-   * Uses exceptions with stack traces.
+   * immediately upon the first validation failure. Does not include input values in error messages
+   * with stack traces.
    *
    * @return a new {@link Validator} instance
    * @see Validator
@@ -54,8 +55,8 @@ public final class SafeValidCheck {
 
   /**
    * Creates a new validator with fail-fast behavior. Throws a {@link FastValidationException}
-   * immediately upon the first validation failure. Does not include input values in error messages.
-   * Uses fast exceptions without stack traces.
+   * immediately upon the first validation failure. Does not include input values in error messages
+   * without stack traces.
    *
    * @return a new {@link Validator} instance
    * @see Validator

@@ -4,8 +4,7 @@ package io.github.aglibs.validcheck;
  * Main entry point for the ValidCheck validation library. Provides static factory methods to create
  * validators for parameter validation.
  *
- * <p>This class creates validators that include actual values in error messages and use stack
- * traces.
+ * <p>This class creates validators that include actual values in error messages with stack traces.
  *
  * @since 1.0.0
  * @see SafeValidCheck
@@ -17,7 +16,7 @@ public final class ValidCheck {
 
   /**
    * Creates a new batch validator that collects all validation errors before throwing. Includes
-   * values in error messages and uses exceptions with stack traces.
+   * values in error messages with stack traces.
    *
    * @return a new {@link BatchValidator} instance
    * @see BatchValidator
@@ -28,7 +27,7 @@ public final class ValidCheck {
 
   /**
    * Creates a new validator with fail-fast behavior. Throws a {@link ValidationException}
-   * immediately upon the first validation failure. Includes values in error messages and stack
+   * immediately upon the first validation failure. Includes values in error messages with stack
    * traces.
    *
    * @return a new {@link Validator} instance

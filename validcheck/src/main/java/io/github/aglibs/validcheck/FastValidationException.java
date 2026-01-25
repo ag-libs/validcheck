@@ -3,7 +3,7 @@ package io.github.aglibs.validcheck;
 import java.util.List;
 
 /**
- * A validation exception that does not fill stack traces.
+ * A validation exception without stack traces.
  *
  * @since 1.0.0
  * @see ValidationException

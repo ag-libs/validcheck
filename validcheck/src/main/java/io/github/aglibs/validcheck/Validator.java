@@ -119,7 +119,7 @@ public class Validator {
   /** Whether to throw immediately on first validation failure. */
   protected final boolean failFast;
 
-  /** Whether to fill stack traces in thrown exceptions (used for default ValidationException). */
+  /** Whether to include stack traces in thrown exceptions. */
   protected final boolean fillStackTrace;
 
   /** Factory for creating exceptions when validation fails. */
