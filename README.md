@@ -14,14 +14,14 @@ Maven:
 <dependency>
   <groupId>io.github.ag-libs.validcheck</groupId>
   <artifactId>validcheck</artifactId>
-  <version>0.9.10</version>
+  <version>0.10.0</version>
 </dependency>
 ```
 
 Gradle:
 
 ```gradle
-implementation 'io.github.ag-libs.validcheck:validcheck:0.9.10'
+implementation 'io.github.ag-libs.validcheck:validcheck:0.10.0'
 ```
 
 ## Usage
