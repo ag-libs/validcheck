@@ -6,6 +6,9 @@
 
 A Java validation library for runtime parameter validation with zero dependencies.
 
+Fluent, opinionated API for validating Java Records. Method chains align nicely when
+formatted with Google Java Format.
+
 ## Installation
 
 Maven:
