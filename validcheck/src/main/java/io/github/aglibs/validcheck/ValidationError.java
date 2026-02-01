@@ -1,7 +1,9 @@
 package io.github.aglibs.validcheck;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Represents a single validation error with an optional field name and error message.
@@ -34,6 +36,10 @@ import java.util.Objects;
  *           ValidationError::field,
  *           Collectors.mapping(ValidationError::message, Collectors.toList())
  *       ));
+ *
+ *   // Join all errors into a single message
+ *   String allErrors = ValidationError.join(errors);
+ *   // Result: "'username' must not be null; 'age' must be positive"
  * }
  * }</pre>
  *
@@ -105,5 +111,30 @@ public final class ValidationError implements Serializable {
   @Override
   public int hashCode() {
     return Objects.hash(field, message);
+  }
+
+  /**
+   * Joins multiple validation errors into a single string separated by semicolons and spaces. Each
+   * error is formatted using {@link #toString()}.
+   *
+   * <p>This is a convenience method for formatting error lists into user-friendly messages.
+   *
+   * <p>Example:
+   *
+   * <pre>{@code
+   * List<ValidationError> errors = List.of(
+   *     new ValidationError("username", "must not be null"),
+   *     new ValidationError("age", "must be positive")
+   * );
+   * String message = ValidationError.join(errors);
+   * // Result: "'username' must not be null; 'age' must be positive"
+   * }</pre>
+   *
+   * @param errors the list of validation errors to join
+   * @return a formatted string with all errors separated by "; ", or empty string if list is empty
+   * @since 1.0.0
+   */
+  public static String join(List<ValidationError> errors) {
+    return errors.stream().map(ValidationError::toString).collect(Collectors.joining("; "));
   }
 }

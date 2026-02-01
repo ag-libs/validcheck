@@ -2,19 +2,18 @@ package io.github.aglibs.validcheck;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
- * Base class for parameter validation with configurable behavior and fluent API. This class is
- * designed for extension and should not be instantiated directly. Use {@link ValidCheck#require()}
- * for fail-fast validation or {@link ValidCheck#check()} for batch validation.
+ * Base class for parameter validation with configurable behavior and fluent API. This class should
+ * not be instantiated directly. Use {@link ValidCheck#require()} for fail-fast validation or {@link
+ * ValidCheck#check()} for batch validation.
  *
  * <p>The validator provides a fluent API that immediately throws on validation failures:
  *
@@ -37,94 +36,51 @@ import java.util.stream.Collectors;
  *          .validate(); // Throws ValidationException with all collected errors
  * }</pre>
  *
- * <h2>Customization</h2>
- *
- * <p>This class can be extended to create custom validators with specialized behavior:
- *
- * <pre>{@code
- * public class MyValidator extends Validator {
- *
- *   public static MyValidator strictValidation() {
- *     // No values in errors, fail-fast, with stack traces, default exception
- *     return new MyValidator(false, true, true, null);
- *   }
- *
- *   public static MyValidator lenientValidation() {
- *     // Include values, batch errors, no stack traces, default exception
- *     return new MyValidator(true, false, false, null);
- *   }
- *
- *   protected MyValidator(boolean safeForClient, boolean failFast,
- *                          boolean fillStackTrace,
- *                          Function<List<String>, RuntimeException> exceptionFactory) {
- *     super(safeForClient, failFast, fillStackTrace, exceptionFactory);
- *   }
- *
- *   // Add custom validation methods
- *   public MyValidator isValidEmail(String email, String name) {
- *     return (MyValidator) matches(email, EMAIL_PATTERN, name);
- *   }
- * }
- * }</pre>
- *
  * <h2>Custom Exception Types</h2>
  *
  * <p>By default, all validation failures throw {@link ValidationException}. To throw custom
- * exception types, pass an exception factory function to the constructor:
+ * exception types, pass an exception factory function to {@link ValidCheck#requireWith(Function)}
+ * or {@link ValidCheck#checkWith(Function)}:
  *
  * <pre>{@code
- * // Custom exception with default formatting ("; " separator)
- * Validator validator = new Validator(true, true, true,
- *     errors -> new IllegalArgumentException(String.join("; ", errors)));
+ * // Fail-fast with custom exception
+ * ValidCheck.requireWith(errors -> new IllegalArgumentException(ValidationError.join(errors)))
+ *     .notNull(null, "value"); // throws IllegalArgumentException
  *
- * validator.notNull(null, "value"); // throws IllegalArgumentException
- *
- * // Custom formatting
- * Validator validator = new Validator(true, true, true,
- *     errors -> new MyException("Errors:\n- " + String.join("\n- ", errors)));
- * }</pre>
- *
- * <h2>Performance Optimization</h2>
- *
- * <p>For high-throughput validation where stack traces are not needed, disable stack trace
- * generation:
- *
- * <pre>{@code
- * // ValidationException without stack traces for better performance
- * Validator validator = new Validator(true, true, false, null);
- * validator.notNull(value, "field");
+ * // Batch validation with custom formatting
+ * ValidCheck.checkWith(errors -> {
+ *     String message = errors.stream()
+ *         .map(e -> e.field() + ": " + e.message())
+ *         .collect(Collectors.joining("\n- ",
+ *             "Validation failed:\n- ", ""));
+ *     return new MyCustomException(message);
+ * })
+ *     .notNull(null, "username")
+ *     .isPositive(-1, "age")
+ *     .validate();
  * }</pre>
  *
  * @since 1.0.0
  * @see ValidCheck#require()
  * @see ValidCheck#check()
+ * @see ValidCheck#requireWith(Function)
+ * @see ValidCheck#checkWith(Function)
  * @see BatchValidator
  * @see ValidationException
  */
 public class Validator {
 
   private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
-  private static final int MAX_DISPLAYED_VALUE_LENGTH = 100;
 
   // Error message constants
   private static final String MSG_NOT_NULL_OR_EMPTY = "must not be null or empty";
   private static final String MSG_NULL_OR_NOT_EMPTY = "must be null or not empty";
 
-  /**
-   * Whether error messages are safe for client/API responses. When true, values are not included in
-   * error messages.
-   */
-  protected final boolean safeForClient;
-
   /** Whether to throw immediately on first validation failure. */
   protected final boolean failFast;
 
-  /** Whether to include stack traces in thrown exceptions. */
-  protected final boolean fillStackTrace;
-
   /** Factory for creating exceptions when validation fails. */
-  protected final java.util.function.Function<List<ValidationError>, RuntimeException>
-      exceptionFactory;
+  protected final Function<List<ValidationError>, RuntimeException> exceptionFactory;
 
   /** List of collected validation errors. */
   protected final List<ValidationError> errors;
@@ -132,81 +88,30 @@ public class Validator {
   /**
    * Constructs a new Validator.
    *
-   * @param safeForClient whether error messages are safe for client/API responses (true = exclude
-   *     values, false = include values)
    * @param failFast whether to throw immediately on first validation failure
-   * @param fillStackTrace whether to fill stack traces in thrown exceptions
-   * @param exceptionFactory factory function to create exceptions; if null, uses default
-   *     ValidationException
+   * @param exceptionFactory factory function to create exceptions from validation errors
    */
-  protected Validator(
-      boolean safeForClient,
-      boolean failFast,
-      boolean fillStackTrace,
-      Function<List<ValidationError>, RuntimeException> exceptionFactory) {
-    this.safeForClient = safeForClient;
+  Validator(boolean failFast, Function<List<ValidationError>, RuntimeException> exceptionFactory) {
     this.failFast = failFast;
-    this.fillStackTrace = fillStackTrace;
-    this.exceptionFactory = exceptionFactory;
+    this.exceptionFactory = Objects.requireNonNull(exceptionFactory);
 
     errors = new ArrayList<>();
-  }
-
-  private String valueToString(Object value) {
-    var string = String.valueOf(value);
-    if (string.length() <= MAX_DISPLAYED_VALUE_LENGTH) {
-      return string;
-    }
-
-    return string.substring(0, MAX_DISPLAYED_VALUE_LENGTH - 3) + "...";
   }
 
   private ValidationError createError(Supplier<String> messageSupplier) {
     return new ValidationError(null, messageSupplier.get());
   }
 
-  private ValidationError createError(
-      Object value, String name, String message, boolean includeValue) {
+  private ValidationError createError(String name, String message) {
     var error = name == null ? String.format("parameter %s", message) : message;
-
-    if (!safeForClient && includeValue && value != null) {
-      var stringValue = valueToString(value);
-      var formattedValue =
-          value instanceof String ? String.format("'%s'", stringValue) : stringValue;
-      // limit the string length of string representation of the value
-      return new ValidationError(name, error + String.format(", but it was %s", formattedValue));
-    }
-
     return new ValidationError(name, error);
   }
 
   /** Throws ValidationException if any errors have been collected. */
   protected void validate() {
     if (!errors.isEmpty()) {
-      throw createException();
+      throw exceptionFactory.apply(errors);
     }
-  }
-
-  /**
-   * Creates the exception to be thrown when validation fails. Uses the exception factory if
-   * provided, otherwise creates a default ValidationException with the configured fillStackTrace
-   * setting.
-   *
-   * <p>This method can be overridden in subclasses for additional exception customization beyond
-   * the factory.
-   *
-   * @return the exception to throw, must not be null
-   * @since 1.0.0
-   */
-  protected RuntimeException createException() {
-    if (exceptionFactory != null) {
-      return exceptionFactory.apply(Collections.unmodifiableList(errors));
-    }
-    final var message =
-        errors.stream().map(ValidationError::toString).collect(Collectors.joining("; "));
-    return fillStackTrace
-        ? new ValidationException(message, errors, safeForClient)
-        : new FastValidationException(message, errors, safeForClient);
   }
 
   // ========================================
@@ -295,7 +200,7 @@ public class Validator {
    *     value is null and fail-fast is enabled
    */
   public Validator notNull(Object value, String name) {
-    return notNullInternal(value, () -> createError(value, name, "must not be null", true));
+    return notNullInternal(value, () -> createError(name, "must not be null"));
   }
 
   /**
@@ -337,7 +242,7 @@ public class Validator {
    *     value is not null and fail-fast is enabled
    */
   public Validator isNull(Object value, String name) {
-    return isNullInternal(value, () -> createError(value, name, "must be null", true));
+    return isNullInternal(value, () -> createError(name, "must be null"));
   }
 
   /**
@@ -391,7 +296,7 @@ public class Validator {
         value,
         min,
         max,
-        () -> createError(value, name, String.format("must be between %s and %s", min, max), true));
+        () -> createError(name, String.format("must be between %s and %s", min, max)));
   }
 
   /**
@@ -458,9 +363,7 @@ public class Validator {
    */
   public <T extends Number> Validator min(T value, T minValue, String name) {
     return minInternal(
-        value,
-        minValue,
-        () -> createError(value, name, String.format("must be at least %s", minValue), true));
+        value, minValue, () -> createError(name, String.format("must be at least %s", minValue)));
   }
 
   /**
@@ -518,9 +421,7 @@ public class Validator {
    */
   public <T extends Number> Validator max(T value, T maxValue, String name) {
     return maxInternal(
-        value,
-        maxValue,
-        () -> createError(value, name, String.format("must be at most %s", maxValue), true));
+        value, maxValue, () -> createError(name, String.format("must be at most %s", maxValue)));
   }
 
   /**
@@ -578,7 +479,7 @@ public class Validator {
    *     value is null or not positive and fail-fast is enabled
    */
   public Validator isPositive(Number value, String name) {
-    return isPositiveInternal(value, () -> createError(value, name, "must be positive", true));
+    return isPositiveInternal(value, () -> createError(name, "must be positive"));
   }
 
   /**
@@ -620,7 +521,7 @@ public class Validator {
    *     value is null or not negative and fail-fast is enabled
    */
   public Validator isNegative(Number value, String name) {
-    return isNegativeInternal(value, () -> createError(value, name, "must be negative", true));
+    return isNegativeInternal(value, () -> createError(name, "must be negative"));
   }
 
   /**
@@ -662,8 +563,7 @@ public class Validator {
    *     value is null or negative and fail-fast is enabled
    */
   public Validator isNonNegative(Number value, String name) {
-    return isNonNegativeInternal(
-        value, () -> createError(value, name, "must be non-negative", true));
+    return isNonNegativeInternal(value, () -> createError(name, "must be non-negative"));
   }
 
   /**
@@ -705,8 +605,7 @@ public class Validator {
    *     value is null or positive and fail-fast is enabled
    */
   public Validator isNonPositive(Number value, String name) {
-    return isNonPositiveInternal(
-        value, () -> createError(value, name, "must be non-positive", true));
+    return isNonPositiveInternal(value, () -> createError(name, "must be non-positive"));
   }
 
   /**
@@ -752,7 +651,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(String value, String name) {
-    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
+    return notEmptyInternal(value, () -> createError(name, MSG_NOT_NULL_OR_EMPTY));
   }
 
   /**
@@ -795,7 +694,7 @@ public class Validator {
    *     value is null, empty, or blank and fail-fast is enabled
    */
   public Validator notBlank(String value, String name) {
-    return notBlankInternal(value, () -> createError(value, name, "must not be blank", false));
+    return notBlankInternal(value, () -> createError(name, "must not be blank"));
   }
 
   /**
@@ -848,10 +747,7 @@ public class Validator {
         maxLength,
         () ->
             createError(
-                value,
-                name,
-                String.format("must have length between %d and %d", minLength, maxLength),
-                true));
+                name, String.format("must have length between %d and %d", minLength, maxLength)));
   }
 
   /**
@@ -909,9 +805,7 @@ public class Validator {
    */
   public Validator matches(String value, String regex, String name) {
     return matchesInternal(
-        value,
-        regex,
-        () -> createError(value, name, String.format("must match pattern '%s'", regex), true));
+        value, regex, () -> createError(name, String.format("must match pattern '%s'", regex)));
   }
 
   /**
@@ -968,9 +862,7 @@ public class Validator {
     return matchesInternal(
         value,
         regex,
-        () ->
-            createError(
-                value, name, String.format("must match pattern '%s'", regex.pattern()), true));
+        () -> createError(name, String.format("must match pattern '%s'", regex.pattern())));
   }
 
   /**
@@ -1024,7 +916,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Collection<?> value, String name) {
-    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
+    return notEmptyInternal(value, () -> createError(name, MSG_NOT_NULL_OR_EMPTY));
   }
 
   /**
@@ -1066,7 +958,7 @@ public class Validator {
    *     value is null or empty and fail-fast is enabled
    */
   public Validator notEmpty(Map<?, ?> value, String name) {
-    return notEmptyInternal(value, () -> createError(value, name, MSG_NOT_NULL_OR_EMPTY, false));
+    return notEmptyInternal(value, () -> createError(name, MSG_NOT_NULL_OR_EMPTY));
   }
 
   /**
@@ -1116,11 +1008,7 @@ public class Validator {
         minSize,
         maxSize,
         () ->
-            createError(
-                value,
-                name,
-                String.format("must have size between %d and %d", minSize, maxSize),
-                true));
+            createError(name, String.format("must have size between %d and %d", minSize, maxSize)));
   }
 
   /**
@@ -1183,11 +1071,7 @@ public class Validator {
         minSize,
         maxSize,
         () ->
-            createError(
-                value,
-                name,
-                String.format("must have size between %d and %d", minSize, maxSize),
-                true));
+            createError(name, String.format("must have size between %d and %d", minSize, maxSize)));
   }
 
   /**
@@ -1255,9 +1139,7 @@ public class Validator {
         value,
         min,
         max,
-        () ->
-            createError(
-                value, name, String.format("must be null or between %s and %s", min, max), true));
+        () -> createError(name, String.format("must be null or between %s and %s", min, max)));
   }
 
   /**
@@ -1327,8 +1209,7 @@ public class Validator {
     return nullOrMinInternal(
         value,
         minValue,
-        () ->
-            createError(value, name, String.format("must be null or at least %s", minValue), true));
+        () -> createError(name, String.format("must be null or at least %s", minValue)));
   }
 
   /**
@@ -1395,8 +1276,7 @@ public class Validator {
     return nullOrMaxInternal(
         value,
         maxValue,
-        () ->
-            createError(value, name, String.format("must be null or at most %s", maxValue), true));
+        () -> createError(name, String.format("must be null or at most %s", maxValue)));
   }
 
   /**
@@ -1459,8 +1339,7 @@ public class Validator {
    *     value is not null and not positive and fail-fast is enabled
    */
   public Validator nullOrIsPositive(Number value, String name) {
-    return nullOrIsPositiveInternal(
-        value, () -> createError(value, name, "must be null or positive", true));
+    return nullOrIsPositiveInternal(value, () -> createError(name, "must be null or positive"));
   }
 
   /**
@@ -1506,8 +1385,7 @@ public class Validator {
    *     value is not null and not negative and fail-fast is enabled
    */
   public Validator nullOrIsNegative(Number value, String name) {
-    return nullOrIsNegativeInternal(
-        value, () -> createError(value, name, "must be null or negative", true));
+    return nullOrIsNegativeInternal(value, () -> createError(name, "must be null or negative"));
   }
 
   /**
@@ -1554,7 +1432,7 @@ public class Validator {
    */
   public Validator nullOrIsNonNegative(Number value, String name) {
     return nullOrIsNonNegativeInternal(
-        value, () -> createError(value, name, "must be null or non-negative", true));
+        value, () -> createError(name, "must be null or non-negative"));
   }
 
   /**
@@ -1601,7 +1479,7 @@ public class Validator {
    */
   public Validator nullOrIsNonPositive(Number value, String name) {
     return nullOrIsNonPositiveInternal(
-        value, () -> createError(value, name, "must be null or non-positive", true));
+        value, () -> createError(name, "must be null or non-positive"));
   }
 
   /**
@@ -1651,8 +1529,7 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(String value, String name) {
-    return nullOrNotEmptyInternal(
-        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
+    return nullOrNotEmptyInternal(value, () -> createError(name, MSG_NULL_OR_NOT_EMPTY));
   }
 
   /**
@@ -1697,8 +1574,7 @@ public class Validator {
    *     value is not null and blank and fail-fast is enabled
    */
   public Validator nullOrNotBlank(String value, String name) {
-    return nullOrNotBlankInternal(
-        value, () -> createError(value, name, "must be null or not blank", false));
+    return nullOrNotBlankInternal(value, () -> createError(name, "must be null or not blank"));
   }
 
   /**
@@ -1753,11 +1629,9 @@ public class Validator {
         maxLength,
         () ->
             createError(
-                value,
                 name,
                 String.format(
-                    "must be null or have length between %d and %d", minLength, maxLength),
-                true));
+                    "must be null or have length between %d and %d", minLength, maxLength)));
   }
 
   /**
@@ -1822,9 +1696,7 @@ public class Validator {
     return nullOrMatchesInternal(
         value,
         regex,
-        () ->
-            createError(
-                value, name, String.format("must be null or match pattern '%s'", regex), true));
+        () -> createError(name, String.format("must be null or match pattern '%s'", regex)));
   }
 
   /**
@@ -1886,10 +1758,7 @@ public class Validator {
         regex,
         () ->
             createError(
-                value,
-                name,
-                String.format("must be null or match pattern '%s'", regex.pattern()),
-                true));
+                name, String.format("must be null or match pattern '%s'", regex.pattern())));
   }
 
   /**
@@ -1946,8 +1815,7 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(Collection<?> value, String name) {
-    return nullOrNotEmptyInternal(
-        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
+    return nullOrNotEmptyInternal(value, () -> createError(name, MSG_NULL_OR_NOT_EMPTY));
   }
 
   /**
@@ -1993,8 +1861,7 @@ public class Validator {
    *     value is not null and empty and fail-fast is enabled
    */
   public Validator nullOrNotEmpty(Map<?, ?> value, String name) {
-    return nullOrNotEmptyInternal(
-        value, () -> createError(value, name, MSG_NULL_OR_NOT_EMPTY, false));
+    return nullOrNotEmptyInternal(value, () -> createError(name, MSG_NULL_OR_NOT_EMPTY));
   }
 
   /**
@@ -2050,10 +1917,8 @@ public class Validator {
         maxSize,
         () ->
             createError(
-                value,
                 name,
-                String.format("must be null or have size between %d and %d", minSize, maxSize),
-                true));
+                String.format("must be null or have size between %d and %d", minSize, maxSize)));
   }
 
   /**
@@ -2122,10 +1987,8 @@ public class Validator {
         maxSize,
         () ->
             createError(
-                value,
                 name,
-                String.format("must be null or have size between %d and %d", minSize, maxSize),
-                true));
+                String.format("must be null or have size between %d and %d", minSize, maxSize)));
   }
 
   /**

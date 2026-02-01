@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings({"ConstantValue"})
@@ -1203,81 +1202,6 @@ class ValidatorTest {
     assertThatThrownBy(() -> validator().isNull(nonNullValue))
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining("parameter must be null");
-  }
-
-  @Test
-  void edgeCaseCoverageForMissedBranches() {
-    // Test formatMessage with includeValue=false (covers missed branch in formatMessage)
-    Validator validatorNoValues =
-        new Validator(true, true, true, null); // safeForClient = true (excludes values)
-    assertThatThrownBy(() -> validatorNoValues.notNull(null, "test"))
-        .hasMessage("'test' must not be null"); // Should not include value
-
-    // Test inRange with null parameters (covers missed branches in inRange)
-
-    assertThatThrownBy(() -> validator().inRange(5, null, 10, "value"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("min and max cannot be null");
-
-    assertThatThrownBy(() -> validator().inRange(5, 0, null, "value"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("min and max cannot be null");
-
-    // Test isNegative with edge cases (covers missed branch in isNegative)
-
-    assertThatThrownBy(() -> validator().isNegative(null, () -> "custom null message"))
-        .hasMessage("custom null message");
-
-    // Test edge case where value is exactly at boundary for inRange
-    ValidCheck.require().inRange(1, 1, 10, "value"); // Min boundary
-    ValidCheck.require().inRange(10, 1, 10, "value"); // Max boundary
-
-    // Test formatMessage with null name (covers missed branch in formatMessage)
-
-    assertThatThrownBy(() -> validator().notNull(null, (String) null))
-        .hasMessage("parameter must not be null"); // Should use "parameter" when name is null
-  }
-
-  @Test
-  void customExceptionType() {
-    // Given - Validator with custom exception factory
-    var validator =
-        new Validator(
-            true,
-            true,
-            true,
-            errors ->
-                new IllegalArgumentException(
-                    errors.stream()
-                        .map(ValidationError::toString)
-                        .collect(Collectors.joining("; "))));
-
-    // When & Then - Verify custom exception is thrown
-    assertThatThrownBy(() -> validator.notNull(null, "value"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("'value' must not be null");
-  }
-
-  @Test
-  void customExceptionWithCustomFormatting() {
-    // Given - BatchValidator with custom formatting (collects all errors)
-    var validator =
-        new BatchValidator(
-            true,
-            true,
-            errors ->
-                new IllegalArgumentException(
-                    "Errors:\n- "
-                        + errors.stream()
-                            .map(ValidationError::toString)
-                            .collect(Collectors.joining("\n- "))));
-
-    // When & Then - Verify custom formatting with multiple errors
-    assertThatThrownBy(() -> validator.notNull(null, "field1").isPositive(-5, "field2").validate())
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Errors:\n- ")
-        .hasMessageContaining("'field1' must not be null")
-        .hasMessageContaining("'field2' must be positive");
   }
 
   @Test

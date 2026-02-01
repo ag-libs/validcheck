@@ -102,4 +102,108 @@ class ValidCheckTest {
         .isInstanceOf(ValidationException.class)
         .satisfies(e -> assertThat(e.getStackTrace()).isNotEmpty());
   }
+
+  @Test
+  void requireWithThrowsCustomException() {
+    // Given - Custom exception factory using ValidationError.join()
+    var customFactory =
+        (java.util.function.Function<java.util.List<ValidationError>, RuntimeException>)
+            errors -> new IllegalArgumentException("Custom: " + ValidationError.join(errors));
+
+    // When & Then - requireWith() throws custom exception on first failure
+    assertThatThrownBy(() -> ValidCheck.requireWith(customFactory).notNull(null, "field"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Custom: 'field' must not be null");
+  }
+
+  @Test
+  void requireWithFailsFast() {
+    // Given - Custom exception factory counting errors
+    var errorCount = new java.util.concurrent.atomic.AtomicInteger(0);
+    var customFactory =
+        (java.util.function.Function<java.util.List<ValidationError>, RuntimeException>)
+            errors -> {
+              errorCount.set(errors.size());
+              return new IllegalStateException("Errors: " + errors.size());
+            };
+
+    // When & Then - Should fail on first error (fail-fast)
+    assertThatThrownBy(
+            () ->
+                ValidCheck.requireWith(customFactory)
+                    .notNull(null, "field1")
+                    .notNull(null, "field2"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("Errors: 1");
+
+    assertThat(errorCount.get()).isEqualTo(1);
+  }
+
+  @Test
+  void checkWithThrowsCustomException() {
+    // Given - Custom exception factory
+    var customFactory =
+        (java.util.function.Function<java.util.List<ValidationError>, RuntimeException>)
+            errors ->
+                new IllegalArgumentException(
+                    "Found " + errors.size() + " error(s): " + errors.get(0).toString());
+
+    // When
+    var validator = ValidCheck.checkWith(customFactory);
+    validator.notNull(null, "field");
+
+    // Then - Should throw custom exception
+    assertThatThrownBy(validator::validate)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Found 1 error(s)")
+        .hasMessageContaining("'field' must not be null");
+  }
+
+  @Test
+  void checkWithCollectsAllErrors() {
+    // Given - Custom exception factory using ValidationError.join()
+    var customFactory =
+        (java.util.function.Function<java.util.List<ValidationError>, RuntimeException>)
+            errors -> new IllegalStateException("Batch errors: " + ValidationError.join(errors));
+
+    // When
+    var validator = ValidCheck.checkWith(customFactory);
+    validator.notNull(null, "field1").notNull(null, "field2").isPositive(-1, "age");
+
+    // Then - Should collect all errors
+    assertThatThrownBy(validator::validate)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("field1")
+        .hasMessageContaining("field2")
+        .hasMessageContaining("age");
+  }
+
+  @Test
+  void checkWithCreatesCorrectValidatorType() {
+    // Given - Custom exception factory
+    var customFactory =
+        (java.util.function.Function<java.util.List<ValidationError>, RuntimeException>)
+            errors -> new IllegalArgumentException("Custom error");
+
+    // When
+    var validator = ValidCheck.checkWith(customFactory);
+
+    // Then - Should create BatchValidator instance
+    assertThat(validator).isInstanceOf(BatchValidator.class);
+  }
+
+  @Test
+  void requireWithCreatesCorrectValidatorType() {
+    // Given - Custom exception factory
+    var customFactory =
+        (java.util.function.Function<java.util.List<ValidationError>, RuntimeException>)
+            errors -> new IllegalArgumentException("Custom error");
+
+    // When
+    var validator = ValidCheck.requireWith(customFactory);
+
+    // Then - Should create Validator but not BatchValidator
+    assertThat(validator).isInstanceOf(Validator.class);
+    assertThat(validator).isNotInstanceOf(BatchValidator.class);
+  }
 }
