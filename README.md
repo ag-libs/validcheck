@@ -6,6 +6,9 @@
 
 A Java validation library for runtime parameter validation with zero dependencies.
 
+Fluent, opinionated API for validating Java Records. Method chains align nicely when
+formatted with Google Java Format.
+
 ## Installation
 
 Maven:
@@ -44,6 +47,8 @@ public record User(String username, String email, int age) {
 }
 ```
 
+Error messages do not include actual values, making them safe for logs and API responses.
+
 **Batch** - Collects all errors before throwing:
 
 ```java
@@ -80,34 +85,6 @@ ValidCheck.check()
     .isPositive(number, "count")
     .validate();
 ```
-
-### SafeValidCheck - Secure Validation
-
-For production environments where input values may contain sensitive data, use
-`SafeValidCheck`. It provides the same API but excludes values from error messages.
-
-Regular methods create exceptions with stack traces. Methods with "Fast" suffix create
-exceptions without stack traces:
-
-```java
-// Validates without exposing password in error messages with stack traces
-SafeValidCheck.require()
-    .notNull(password, "password")
-    .hasLength(password, 8, 100, "password");
-// Error: "'password' must have length between 8 and 100"
-// (actual password value NOT included)
-
-// Fast validation without stack traces for high-throughput scenarios
-SafeValidCheck.requireFast()
-    .notNull(apiKey, "apiKey")
-    .hasLength(apiKey, 32, 64, "apiKey");
-```
-
-Use `SafeValidCheck` when validating passwords, tokens, API keys, or any sensitive data to
-prevent information leaks in logs and error messages. It also protects against XSS attacks
-when input values contain HTML/JavaScript code that could be interpreted by browsers in error
-responses. Use the "Fast" suffix methods for high-throughput API request validation where
-exception creation without stack traces improves performance.
 
 ## Validation Methods
 
@@ -262,8 +239,8 @@ ValidCheck.require()
 
 ## Error Handling
 
-All validation failures throw `ValidationException` which contains structured error
-information.
+All validation failures throw `ValidationException` (or `FastValidationException` if configured)
+which contains structured error information.
 
 ### Single Error (Fail-Fast)
 
@@ -272,10 +249,10 @@ try {
     ValidCheck.require().isPositive(-5, "age");
 } catch (ValidationException e) {
     System.out.println(e.getMessage()); 
-    // "'age' must be positive, but it was -5"
+    // "'age' must be positive"
     
     List<ValidationError> errors = e.getErrors();
-    // [ValidationError{field="age", message="must be positive, but it was -5"}]
+    // [ValidationError{field="age", message="must be positive"}]
 }
 ```
 
@@ -289,11 +266,11 @@ try {
         .validate();
 } catch (ValidationException e) {
     System.out.println(e.getMessage());
-    // "'username' must not be null; 'age' must be positive, but it was -1"
+    // "'username' must not be null; 'age' must be positive"
     
     List<ValidationError> errors = e.getErrors();
     // [ValidationError{field="username", message="must not be null"},
-    //  ValidationError{field="age", message="must be positive, but it was -1"}]
+    //  ValidationError{field="age", message="must be positive"}]
 }
 ```
 
@@ -323,7 +300,7 @@ try {
             Collectors.mapping(ValidationError::message, Collectors.toList())
         ));
     // {"username": ["must not be null"], 
-    //  "age": ["must be positive, but it was -1"]}
+    //  "age": ["must be positive"]}
 }
 ```
 
@@ -332,51 +309,58 @@ try {
 ### Custom Exception Types
 
 ValidCheck allows you to throw custom exception types instead of the default
-`ValidationException`. Simply pass an exception factory function to the `Validator` or
-`BatchValidator` constructor:
+`ValidationException`. Pass an exception factory function to `requireWith()` or `checkWith()`:
 
 ```java
-// Throw IllegalArgumentException instead of ValidationException
-var validator = new Validator(true, true, true,
-    errors -> new IllegalArgumentException(
-        String.join("; ", errors.stream()
-            .map(ValidationError::toString)
-            .collect(Collectors.toList()))));
+// Fail-fast with IllegalArgumentException
+ValidCheck.requireWith(errors -> new IllegalArgumentException(ValidationError.join(errors)))
+    .notNull(null, "value")
+    .isPositive(-1, "count"); // throws IllegalArgumentException
 
-validator.notNull(null, "value"); // throws IllegalArgumentException
-
-// Custom formatting with structured error access
-var validator = new BatchValidator(true, true,
-    errors -> {
-        String message = errors.stream()
-            .map(e -> e.field() + ": " + e.message())
-            .collect(Collectors.joining("\n- ", 
-                "Validation failed:\n- ", ""));
-        return new MyException(message);
-    });
+// Batch validation with custom exception and formatting
+ValidCheck.checkWith(errors -> {
+    String message = errors.stream()
+        .map(e -> e.field() + ": " + e.message())
+        .collect(Collectors.joining("\n- ", 
+            "Validation failed:\n- ", ""));
+    return new MyCustomException(message);
+})
+    .notNull(null, "username")
+    .isPositive(-1, "age")
+    .validate(); // throws MyCustomException
 ```
 
-This is useful when integrating with frameworks that expect specific exception types
-(Spring, Jakarta Bean Validation, etc.).
+The exception factory receives a `List<ValidationError>` with structured error information:
+- `field()` - the field name or null
+- `message()` - the error message without field name
+- `toString()` - formatted as "'field' message"
+- `join(errors)` - convenience method to join all errors with "; " separator
 
-### Custom Validation Methods
+This approach is useful when:
+- Integrating with frameworks expecting specific exceptions (Spring's `IllegalArgumentException`, Jakarta Bean Validation)
+- Building REST APIs that need custom error response formats
+- Adding correlation IDs or context to exceptions
 
-You can extend the `Validator` and `BatchValidator` classes to add domain-specific
-validation methods:
+### FastValidationException - High-Performance Validation
+
+For rare high-throughput scenarios where stack traces are not needed, use `FastValidationException`:
 
 ```java
-public class MyValidator extends Validator {
-    protected MyValidator() {
-        super(true, true, true, null);
-    }
-    
-    public MyValidator isValidEmail(String email, String name) {
-        return (MyValidator) matches(email, EMAIL_PATTERN, name);
-    }
-}
+// Fail-fast without stack traces (better performance)
+ValidCheck.requireWith(FastValidationException::new)
+    .notNull(apiKey, "apiKey")
+    .hasLength(apiKey, 32, 64, "apiKey");
+
+// Batch validation without stack traces
+ValidCheck.checkWith(FastValidationException::new)
+    .notNull(username, "username")
+    .isPositive(age, "age")
+    .validate();
 ```
 
-See the Javadoc in the source code for detailed examples.
+`FastValidationException` skips stack trace generation, improving performance in:
+- High-frequency API request validation
+- Performance-critical validation paths
 
 ## Examples
 

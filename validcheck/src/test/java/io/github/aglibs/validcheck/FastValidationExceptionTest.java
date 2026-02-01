@@ -9,77 +9,61 @@ import org.junit.jupiter.api.Test;
 class FastValidationExceptionTest {
 
   @Test
-  void fastValidationExceptionShouldNotFillStackTrace() {
+  void constructorsAndStackTraceBehavior() {
     // Given
-    FastValidationException exception =
-        new FastValidationException(
-            "Error", List.of(new ValidationError("field", "invalid")), true);
+    List<ValidationError> errors =
+        List.of(
+            new ValidationError("field1", "must not be null"),
+            new ValidationError("field2", "must be positive"));
+
+    // When - Constructor with custom message
+    var exception1 = new FastValidationException("Custom message", errors);
 
     // Then
-    assertThat(exception.getStackTrace()).isEmpty();
+    assertThat(exception1.getMessage()).isEqualTo("Custom message");
+    assertThat(exception1.getErrors()).isEqualTo(errors);
+    assertThat(exception1.getStackTrace()).isEmpty();
+
+    // When - Constructor with auto-generated message
+    var exception2 = new FastValidationException(errors);
+
+    // Then
+    assertThat(exception2.getMessage())
+        .isEqualTo("'field1' must not be null; 'field2' must be positive");
+    assertThat(exception2.getErrors()).isEqualTo(errors);
+    assertThat(exception2.getStackTrace()).isEmpty();
+
+    // When - fillInStackTrace called
+    Throwable result = exception2.fillInStackTrace();
+
+    // Then - Should return this without filling
+    assertThat(result).isSameAs(exception2);
+    assertThat(exception2.getStackTrace()).isEmpty();
   }
 
   @Test
-  void validatorWithFillStackTraceFalseShouldThrowFastValidationException() {
-    // Given - safeForClient=false means include values
-    Validator validator = new Validator(false, true, false, null);
-
-    // Then
-    assertThatThrownBy(() -> validator.notNull(null, "value"))
+  void integrationWithRequireWithAndCheckWith() {
+    // When & Then - requireWith throws FastValidationException without stack trace
+    assertThatThrownBy(
+            () -> ValidCheck.requireWith(FastValidationException::new).notNull(null, "field"))
         .isInstanceOf(FastValidationException.class)
+        .isInstanceOf(ValidationException.class)
+        .hasMessageContaining("'field' must not be null")
         .satisfies(e -> assertThat(e.getStackTrace()).isEmpty());
-  }
 
-  @Test
-  void fastValidationExceptionShouldInheritIncludeValueFlag() {
-    // Given - safeForClient=true means values are excluded (safe)
-    FastValidationException exceptionSafe =
-        new FastValidationException(
-            "Error", List.of(new ValidationError("field", "invalid")), true);
-    // Given - safeForClient=false means values are included (unsafe)
-    FastValidationException exceptionUnsafe =
-        new FastValidationException(
-            "Error", List.of(new ValidationError("field", "invalid")), false);
+    // When & Then - checkWith throws FastValidationException with multiple errors
+    var validator = ValidCheck.checkWith(FastValidationException::new);
+    validator.notNull(null, "field1").notNull(null, "field2");
 
-    // Then
-    assertThat(exceptionSafe.isSafeForClient()).isTrue();
-    assertThat(exceptionUnsafe.isSafeForClient()).isFalse();
-  }
-
-  @Test
-  void constructorWithFieldNameMessageAndSafeForClient() {
-    // Given
-    String fieldName = "email";
-    String message = "invalid format";
-
-    // When
-    FastValidationException exception = new FastValidationException(fieldName, message, true);
-
-    // Then
-    assertThat(exception.getMessage()).isEqualTo(message);
-    assertThat(exception.isSafeForClient()).isTrue();
-    assertThat(exception.getStackTrace()).isEmpty();
-    assertThat(exception.getErrors()).hasSize(1);
-    assertThat(exception.getErrors().get(0))
-        .extracting(ValidationError::field, ValidationError::message)
-        .containsExactly(fieldName, message);
-  }
-
-  @Test
-  void constructorWithMessageAndSafeForClient() {
-    // Given
-    String message = "validation failed";
-
-    // When
-    FastValidationException exception = new FastValidationException(message, false);
-
-    // Then
-    assertThat(exception.getMessage()).isEqualTo(message);
-    assertThat(exception.isSafeForClient()).isFalse();
-    assertThat(exception.getStackTrace()).isEmpty();
-    assertThat(exception.getErrors()).hasSize(1);
-    assertThat(exception.getErrors().get(0))
-        .extracting(ValidationError::field, ValidationError::message)
-        .containsExactly(null, message);
+    assertThatThrownBy(validator::validate)
+        .isInstanceOf(FastValidationException.class)
+        .hasMessageContaining("'field1' must not be null")
+        .hasMessageContaining("'field2' must not be null")
+        .satisfies(
+            e -> {
+              assertThat(e.getStackTrace()).isEmpty();
+              FastValidationException fve = (FastValidationException) e;
+              assertThat(fve.getErrors()).hasSize(2);
+            });
   }
 }

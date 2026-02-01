@@ -32,7 +32,7 @@ class BatchValidatorTest {
         .containsExactlyInAnyOrder(
             new ValidationError("name", "must not be null"),
             new ValidationError("email", "must not be null or empty"),
-            new ValidationError("age", "must be positive, but it was -5"));
+            new ValidationError("age", "must be positive"));
 
     // Then - Test isValid() method
     assertThat(validator.isValid()).isFalse();
@@ -41,7 +41,7 @@ class BatchValidatorTest {
     assertThatThrownBy(validator::validate)
         .isInstanceOf(ValidationException.class)
         .hasMessageContaining(
-            "'name' must not be null; 'email' must not be null or empty; 'age' must be positive, but it was -5");
+            "'name' must not be null; 'email' must not be null or empty; 'age' must be positive");
 
     // Given - Valid data
     BatchValidator validValidator =
@@ -75,9 +75,9 @@ class BatchValidatorTest {
         .containsExactlyInAnyOrder(
             new ValidationError("email", "must not be null or empty"),
             new ValidationError("username", "must not be null"),
-            new ValidationError("password", "must have length between 5 and 20, but it was 'ab'"),
+            new ValidationError("password", "must have length between 5 and 20"),
             new ValidationError("street", "must not be blank"),
-            new ValidationError("zipCode", "must be positive, but it was -1"));
+            new ValidationError("zipCode", "must be positive"));
 
     // When - Include validator with no errors
     BatchValidator emptyValidator = ValidCheck.check();
@@ -262,26 +262,22 @@ class BatchValidatorTest {
         .hasSize(17)
         .containsOnly(
             new ValidationError(null, "parameter must not be null"),
-            new ValidationError(null, "parameter must be between 1 and 50, but it was 100"),
+            new ValidationError(null, "parameter must be between 1 and 50"),
             new ValidationError(null, "parameter must not be null or empty"),
             new ValidationError(null, "parameter must not be null or empty"),
             new ValidationError(null, "parameter must not be null or empty"),
             new ValidationError(null, "parameter must not be blank"),
-            new ValidationError(
-                null,
-                "parameter must have length between 1 and 100, but it was 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...'"),
-            new ValidationError(null, "parameter must have size between 2 and 5, but it was [a]"),
-            new ValidationError(null, "parameter must have size between 2 and 5, but it was {}"),
-            new ValidationError(null, "parameter must be positive, but it was -5"),
-            new ValidationError(null, "parameter must be negative, but it was 5"),
-            new ValidationError(
-                null, "parameter must match pattern '^[a-z]+$', but it was 'ABC123'"),
-            new ValidationError(
-                null, "parameter must match pattern '^[a-z]+$', but it was 'ABC123'"),
-            new ValidationError(null, "parameter must be non-negative, but it was -5"),
-            new ValidationError(null, "parameter must be non-positive, but it was 5"),
-            new ValidationError(null, "parameter must be at least 0, but it was -5"),
-            new ValidationError(null, "parameter must be at most 50, but it was 100"));
+            new ValidationError(null, "parameter must have length between 1 and 100"),
+            new ValidationError(null, "parameter must have size between 2 and 5"),
+            new ValidationError(null, "parameter must have size between 2 and 5"),
+            new ValidationError(null, "parameter must be positive"),
+            new ValidationError(null, "parameter must be negative"),
+            new ValidationError(null, "parameter must match pattern '^[a-z]+$'"),
+            new ValidationError(null, "parameter must match pattern '^[a-z]+$'"),
+            new ValidationError(null, "parameter must be non-negative"),
+            new ValidationError(null, "parameter must be non-positive"),
+            new ValidationError(null, "parameter must be at least 0"),
+            new ValidationError(null, "parameter must be at most 50"));
     assertThat(validator.isValid()).isFalse();
 
     // When & Then - Validate should throw with all collected errors

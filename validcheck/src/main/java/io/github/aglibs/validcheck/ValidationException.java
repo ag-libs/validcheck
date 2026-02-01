@@ -19,57 +19,46 @@ public class ValidationException extends RuntimeException {
   private final List<ValidationError> errors;
 
   /**
-   * Indicates whether it is safe to include error messages in API responses. When true, error
-   * messages do not contain sensitive data and can be exposed to clients.
-   */
-  private final boolean safeForClient;
-
-  /**
-   * Constructs a new ValidationException with the specified configuration.
+   * Constructs a new ValidationException.
    *
    * @param message the detail message combining all validation errors
    * @param errors the list of individual validation errors
-   * @param safeForClient whether it is safe to include error messages in API responses
    */
-  public ValidationException(String message, List<ValidationError> errors, boolean safeForClient) {
+  public ValidationException(String message, List<ValidationError> errors) {
     super(message);
     this.errors = Collections.unmodifiableList(errors);
-    this.safeForClient = safeForClient;
   }
 
   /**
-   * Constructs a new ValidationException with the specified configuration.
+   * Constructs a new ValidationException with auto-generated message.
    *
-   * @param message the detail message combining all validation errors
-   * @param name the name of the field
-   * @param safeForClient whether it is safe to include error messages in API responses
-   * @param cause the cause of this exception
+   * @param errors the list of individual validation errors
    */
-  public ValidationException(String name, String message, boolean safeForClient, Exception cause) {
+  public ValidationException(List<ValidationError> errors) {
+    this(ValidationError.join(errors), errors);
+  }
+
+  /**
+   * Constructs a new ValidationException for manual throwing with a cause.
+   *
+   * <p>This constructor is useful when wrapping other exceptions during manual validation:
+   *
+   * <pre>{@code
+   * try {
+   *     // Some operation that might fail
+   *     validateBusinessRule(data);
+   * } catch (DatabaseException e) {
+   *     throw new ValidationException("userId", "user not found in database", e);
+   * }
+   * }</pre>
+   *
+   * @param name the name of the field that failed validation
+   * @param message the validation error message
+   * @param cause the underlying cause of the validation failure
+   */
+  public ValidationException(String name, String message, Throwable cause) {
     super(message, cause);
     this.errors = List.of(new ValidationError(name, message));
-    this.safeForClient = safeForClient;
-  }
-
-  /**
-   * Constructs a new ValidationException with the specified configuration.
-   *
-   * @param message the detail message combining all validation errors
-   * @param safeForClient whether it is safe to include error messages in API responses
-   */
-  public ValidationException(String message, boolean safeForClient) {
-    this(null, message, safeForClient, null);
-  }
-
-  /**
-   * Constructs a new ValidationException with the specified configuration.
-   *
-   * @param message the detail message combining all validation errors
-   * @param safeForClient whether it is safe to include error messages in API responses
-   * @param cause the cause of this exception
-   */
-  public ValidationException(String message, boolean safeForClient, Exception cause) {
-    this(null, message, safeForClient, cause);
   }
 
   /**
@@ -79,14 +68,5 @@ public class ValidationException extends RuntimeException {
    */
   public List<ValidationError> getErrors() {
     return errors;
-  }
-
-  /**
-   * Returns whether error messages are safe for client/API responses.
-   *
-   * @return true if values are not included in error messages, false otherwise
-   */
-  public boolean isSafeForClient() {
-    return safeForClient;
   }
 }

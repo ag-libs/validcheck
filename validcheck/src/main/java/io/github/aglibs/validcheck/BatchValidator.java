@@ -60,13 +60,13 @@ import java.util.regex.Pattern;
  * }</pre>
  *
  * <p><strong>Note:</strong> By default, validation failures throw {@link ValidationException}. To
- * throw custom exception types, pass an exception factory to the constructor. See {@link Validator}
- * class documentation for details and examples.
+ * throw custom exception types, use {@link ValidCheck#checkWith(java.util.function.Function)} with
+ * a custom exception factory.
  *
  * @since 1.0.0
  * @see ValidCheck#check()
+ * @see ValidCheck#checkWith(java.util.function.Function)
  * @see Validator
- * @see Validator#createException()
  * @see ValidationException
  */
 public class BatchValidator extends Validator {
@@ -74,17 +74,10 @@ public class BatchValidator extends Validator {
   /**
    * Constructs a new BatchValidator.
    *
-   * @param safeForClient whether error messages are safe for client/API responses (true = exclude
-   *     values, false = include values)
-   * @param fillStackTrace whether to fill stack traces in thrown exceptions
-   * @param exceptionFactory factory function to create exceptions; if null, uses default
-   *     ValidationException
+   * @param exceptionFactory factory function to create custom exceptions from validation errors
    */
-  protected BatchValidator(
-      boolean safeForClient,
-      boolean fillStackTrace,
-      Function<List<ValidationError>, RuntimeException> exceptionFactory) {
-    super(safeForClient, false, fillStackTrace, exceptionFactory);
+  BatchValidator(Function<List<ValidationError>, RuntimeException> exceptionFactory) {
+    super(false, exceptionFactory);
   }
 
   /**

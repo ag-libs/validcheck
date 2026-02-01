@@ -1,13 +1,20 @@
 package io.github.aglibs.validcheck;
 
+import java.util.List;
+import java.util.function.Function;
+
 /**
  * Main entry point for the ValidCheck validation library. Provides static factory methods to create
  * validators for parameter validation.
  *
- * <p>This class creates validators that include actual values in error messages with stack traces.
+ * <p>Error messages never include actual parameter values, making them safe for logs and API
+ * responses when handling sensitive data (passwords, tokens, API keys).
+ *
+ * <p>For high-performance scenarios, use {@link #requireWith(Function)} or {@link
+ * #checkWith(Function)} with {@link FastValidationException} to skip stack trace generation.
  *
  * @since 1.0.0
- * @see SafeValidCheck
+ * @see FastValidationException
  */
 public final class ValidCheck {
 
@@ -15,26 +22,78 @@ public final class ValidCheck {
   private ValidCheck() {}
 
   /**
-   * Creates a new batch validator that collects all validation errors before throwing. Includes
-   * values in error messages with stack traces.
+   * Creates a new batch validator that collects all validation errors before throwing.
    *
    * @return a new {@link BatchValidator} instance
    * @see BatchValidator
    */
   public static BatchValidator check() {
-    return new BatchValidator(false, true, null);
+    return new BatchValidator(ValidationException::new);
+  }
+
+  /**
+   * Creates a new batch validator with a custom exception factory.
+   *
+   * <p>Use this method to throw custom exception types or to use {@link FastValidationException}
+   * for better performance:
+   *
+   * <pre>{@code
+   * // Use FastValidationException (no stack traces)
+   * ValidCheck.checkWith(FastValidationException::new)
+   *     .notNull(value, "value")
+   *     .validate();
+   *
+   * // Use custom exception type
+   * ValidCheck.checkWith(errors -> new IllegalArgumentException(ValidationError.join(errors)))
+   *     .notNull(value, "value")
+   *     .validate();
+   * }</pre>
+   *
+   * @param exceptionFactory factory function to create custom exceptions from validation errors
+   * @return a new {@link BatchValidator} instance
+   * @see BatchValidator
+   * @see FastValidationException
+   */
+  public static BatchValidator checkWith(
+      Function<List<ValidationError>, RuntimeException> exceptionFactory) {
+    return new BatchValidator(exceptionFactory);
   }
 
   /**
    * Creates a new validator with fail-fast behavior. Throws a {@link ValidationException}
-   * immediately upon the first validation failure. Includes values in error messages with stack
-   * traces.
+   * immediately upon the first validation failure.
    *
    * @return a new {@link Validator} instance
    * @see Validator
    */
   public static Validator require() {
-    return new Validator(false, true, true, null);
+    return new Validator(true, ValidationException::new);
+  }
+
+  /**
+   * Creates a new fail-fast validator with a custom exception factory.
+   *
+   * <p>Use this method to throw custom exception types or to use {@link FastValidationException}
+   * for better performance:
+   *
+   * <pre>{@code
+   * // Use FastValidationException (no stack traces)
+   * ValidCheck.requireWith(FastValidationException::new)
+   *     .notNull(value, "value");
+   *
+   * // Use custom exception type
+   * ValidCheck.requireWith(errors -> new IllegalArgumentException(ValidationError.join(errors)))
+   *     .notNull(value, "value");
+   * }</pre>
+   *
+   * @param exceptionFactory factory function to create custom exceptions from validation errors
+   * @return a new {@link Validator} instance
+   * @see Validator
+   * @see FastValidationException
+   */
+  public static Validator requireWith(
+      Function<List<ValidationError>, RuntimeException> exceptionFactory) {
+    return new Validator(true, exceptionFactory);
   }
 
   /**

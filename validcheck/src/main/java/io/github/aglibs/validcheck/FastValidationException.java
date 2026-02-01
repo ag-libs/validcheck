@@ -3,53 +3,61 @@ package io.github.aglibs.validcheck;
 import java.util.List;
 
 /**
- * A validation exception without stack traces.
+ * A validation exception without stack traces for high-throughput scenarios.
+ *
+ * <p>This exception is identical to {@link ValidationException} but skips stack trace generation,
+ * making it more performant in scenarios where stack traces are not needed (e.g., API request
+ * validation, high-frequency validation in hot paths).
+ *
+ * <p>Use this exception with {@link ValidCheck#requireWith(java.util.function.Function)} or {@link
+ * ValidCheck#checkWith(java.util.function.Function)}:
+ *
+ * <pre>{@code
+ * // Fail-fast validation without stack traces
+ * ValidCheck.requireWith(FastValidationException::new)
+ *     .notNull(apiKey, "apiKey")
+ *     .hasLength(apiKey, 32, 64, "apiKey");
+ *
+ * // Batch validation without stack traces
+ * ValidCheck.checkWith(FastValidationException::new)
+ *     .notNull(username, "username")
+ *     .isPositive(age, "age")
+ *     .validate();
+ * }</pre>
  *
  * @since 1.0.0
  * @see ValidationException
- * @see Validator
+ * @see ValidCheck#requireWith(java.util.function.Function)
+ * @see ValidCheck#checkWith(java.util.function.Function)
  */
 public final class FastValidationException extends ValidationException {
 
   private static final long serialVersionUID = 1L;
 
   /**
-   * Constructs a new FastValidationException.
+   * Constructs a new FastValidationException with custom message.
    *
    * @param message the detail message combining all validation errors
    * @param errors the list of individual validation errors
-   * @param safeForClient whether error messages are safe for client/API responses
    */
-  public FastValidationException(
-      String message, List<ValidationError> errors, boolean safeForClient) {
-    super(message, errors, safeForClient);
+  public FastValidationException(String message, List<ValidationError> errors) {
+    super(message, errors);
   }
 
   /**
-   * Constructs a new FastValidationException with the specified configuration.
+   * Constructs a new FastValidationException with auto-generated message using {@link
+   * ValidationError#join(List)}.
    *
-   * @param message the detail message combining all validation errors
-   * @param name the name of the field
-   * @param safeForClient whether it is safe to include error messages in API responses
+   * @param errors the list of individual validation errors
    */
-  public FastValidationException(String name, String message, boolean safeForClient) {
-    super(name, message, safeForClient, null);
+  public FastValidationException(List<ValidationError> errors) {
+    super(errors);
   }
 
   /**
-   * Constructs a new FastValidationException with the specified configuration.
+   * Overrides to skip stack trace filling for improved performance.
    *
-   * @param message the detail message combining all validation errors
-   * @param safeForClient whether it is safe to include error messages in API responses
-   */
-  public FastValidationException(String message, boolean safeForClient) {
-    super(message, safeForClient);
-  }
-
-  /**
-   * Overrides to skip stack trace filling.
-   *
-   * @return this throwable instance
+   * @return this throwable instance without filled stack trace
    */
   @Override
   public synchronized Throwable fillInStackTrace() {
