@@ -17,14 +17,14 @@ Maven:
 <dependency>
   <groupId>io.github.ag-libs.validcheck</groupId>
   <artifactId>validcheck</artifactId>
-  <version>0.10.0</version>
+  <version>0.10.1</version>
 </dependency>
 ```
 
 Gradle:
 
 ```gradle
-implementation 'io.github.ag-libs.validcheck:validcheck:0.10.0'
+implementation 'io.github.ag-libs.validcheck:validcheck:0.10.1'
 ```
 
 ## Usage
