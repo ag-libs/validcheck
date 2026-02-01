@@ -236,8 +236,8 @@ ValidCheck.require()
 
 ## Error Handling
 
-All validation failures throw `ValidationException` which contains structured error
-information.
+All validation failures throw `ValidationException` (or `FastValidationException` if configured)
+which contains structured error information.
 
 ### Single Error (Fail-Fast)
 
@@ -337,6 +337,27 @@ This approach is useful when:
 - Integrating with frameworks expecting specific exceptions (Spring's `IllegalArgumentException`, Jakarta Bean Validation)
 - Building REST APIs that need custom error response formats
 - Adding correlation IDs or context to exceptions
+
+### FastValidationException - High-Performance Validation
+
+For rare high-throughput scenarios where stack traces are not needed, use `FastValidationException`:
+
+```java
+// Fail-fast without stack traces (better performance)
+ValidCheck.requireWith(FastValidationException::new)
+    .notNull(apiKey, "apiKey")
+    .hasLength(apiKey, 32, 64, "apiKey");
+
+// Batch validation without stack traces
+ValidCheck.checkWith(FastValidationException::new)
+    .notNull(username, "username")
+    .isPositive(age, "age")
+    .validate();
+```
+
+`FastValidationException` skips stack trace generation, improving performance in:
+- High-frequency API request validation
+- Performance-critical validation paths
 
 ## Examples
 

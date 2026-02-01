@@ -206,4 +206,31 @@ class ValidCheckTest {
     assertThat(validator).isInstanceOf(Validator.class);
     assertThat(validator).isNotInstanceOf(BatchValidator.class);
   }
+
+  @Test
+  void validationExceptionGetErrorsReturnsErrorList() {
+    // When & Then - require() throws ValidationException with getErrors()
+    assertThatThrownBy(() -> ValidCheck.require().notNull(null, "testField"))
+        .isInstanceOf(ValidationException.class)
+        .satisfies(
+            thrown -> {
+              ValidationException ve = (ValidationException) thrown;
+              assertThat(ve.getErrors()).hasSize(1);
+              assertThat(ve.getErrors().get(0).field()).isEqualTo("testField");
+              assertThat(ve.getErrors().get(0).message()).isEqualTo("must not be null");
+            });
+
+    // When & Then - check() throws ValidationException with multiple errors
+    var validator = ValidCheck.check();
+    validator.notNull(null, "field1").isPositive(-1, "field2");
+    assertThatThrownBy(validator::validate)
+        .isInstanceOf(ValidationException.class)
+        .satisfies(
+            thrown -> {
+              ValidationException ve = (ValidationException) thrown;
+              assertThat(ve.getErrors()).hasSize(2);
+              assertThat(ve.getErrors().get(0).field()).isEqualTo("field1");
+              assertThat(ve.getErrors().get(1).field()).isEqualTo("field2");
+            });
+  }
 }

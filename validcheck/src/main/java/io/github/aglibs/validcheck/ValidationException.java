@@ -19,7 +19,7 @@ public class ValidationException extends RuntimeException {
   private final List<ValidationError> errors;
 
   /**
-   * Constructs a new ValidationException with the specified configuration.
+   * Constructs a new ValidationException.
    *
    * @param message the detail message combining all validation errors
    * @param errors the list of individual validation errors
@@ -29,6 +29,11 @@ public class ValidationException extends RuntimeException {
     this.errors = Collections.unmodifiableList(errors);
   }
 
+  /**
+   * Constructs a new ValidationException.
+   *
+   * @param errors the list of individual validation errors
+   */
   public ValidationException(List<ValidationError> errors) {
     this(ValidationError.join(errors), errors);
   }

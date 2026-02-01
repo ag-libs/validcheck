@@ -10,7 +10,11 @@ import java.util.function.Function;
  * <p>Error messages never include actual parameter values, making them safe for logs and API
  * responses when handling sensitive data (passwords, tokens, API keys).
  *
+ * <p>For high-performance scenarios, use {@link #requireWith(Function)} or {@link
+ * #checkWith(Function)} with {@link FastValidationException} to skip stack trace generation.
+ *
  * @since 1.0.0
+ * @see FastValidationException
  */
 public final class ValidCheck {
 
@@ -30,9 +34,25 @@ public final class ValidCheck {
   /**
    * Creates a new batch validator with a custom exception factory.
    *
+   * <p>Use this method to throw custom exception types or to use {@link FastValidationException}
+   * for better performance:
+   *
+   * <pre>{@code
+   * // Use FastValidationException (no stack traces)
+   * ValidCheck.checkWith(FastValidationException::new)
+   *     .notNull(value, "value")
+   *     .validate();
+   *
+   * // Use custom exception type
+   * ValidCheck.checkWith(errors -> new IllegalArgumentException(ValidationError.join(errors)))
+   *     .notNull(value, "value")
+   *     .validate();
+   * }</pre>
+   *
    * @param exceptionFactory factory function to create custom exceptions from validation errors
    * @return a new {@link BatchValidator} instance
    * @see BatchValidator
+   * @see FastValidationException
    */
   public static BatchValidator checkWith(
       Function<List<ValidationError>, RuntimeException> exceptionFactory) {
@@ -53,9 +73,23 @@ public final class ValidCheck {
   /**
    * Creates a new fail-fast validator with a custom exception factory.
    *
+   * <p>Use this method to throw custom exception types or to use {@link FastValidationException}
+   * for better performance:
+   *
+   * <pre>{@code
+   * // Use FastValidationException (no stack traces)
+   * ValidCheck.requireWith(FastValidationException::new)
+   *     .notNull(value, "value");
+   *
+   * // Use custom exception type
+   * ValidCheck.requireWith(errors -> new IllegalArgumentException(ValidationError.join(errors)))
+   *     .notNull(value, "value");
+   * }</pre>
+   *
    * @param exceptionFactory factory function to create custom exceptions from validation errors
    * @return a new {@link Validator} instance
    * @see Validator
+   * @see FastValidationException
    */
   public static Validator requireWith(
       Function<List<ValidationError>, RuntimeException> exceptionFactory) {
