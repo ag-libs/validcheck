@@ -233,4 +233,20 @@ class ValidCheckTest {
               assertThat(ve.getErrors().get(1).field()).isEqualTo("field2");
             });
   }
+
+  @Test
+  void validationExceptionManualConstructorWithCause() {
+    // Given
+    var cause = new IllegalStateException("Database error");
+
+    // When
+    var exception = new ValidationException("userId", "user not found in database", cause);
+
+    // Then
+    assertThat(exception.getMessage()).isEqualTo("user not found in database");
+    assertThat(exception.getCause()).isSameAs(cause);
+    assertThat(exception.getErrors()).hasSize(1);
+    assertThat(exception.getErrors().get(0).field()).isEqualTo("userId");
+    assertThat(exception.getErrors().get(0).message()).isEqualTo("user not found in database");
+  }
 }

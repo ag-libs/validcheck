@@ -30,12 +30,35 @@ public class ValidationException extends RuntimeException {
   }
 
   /**
-   * Constructs a new ValidationException.
+   * Constructs a new ValidationException with auto-generated message.
    *
    * @param errors the list of individual validation errors
    */
   public ValidationException(List<ValidationError> errors) {
     this(ValidationError.join(errors), errors);
+  }
+
+  /**
+   * Constructs a new ValidationException for manual throwing with a cause.
+   *
+   * <p>This constructor is useful when wrapping other exceptions during manual validation:
+   *
+   * <pre>{@code
+   * try {
+   *     // Some operation that might fail
+   *     validateBusinessRule(data);
+   * } catch (DatabaseException e) {
+   *     throw new ValidationException("userId", "user not found in database", e);
+   * }
+   * }</pre>
+   *
+   * @param name the name of the field that failed validation
+   * @param message the validation error message
+   * @param cause the underlying cause of the validation failure
+   */
+  public ValidationException(String name, String message, Throwable cause) {
+    super(message, cause);
+    this.errors = List.of(new ValidationError(name, message));
   }
 
   /**
