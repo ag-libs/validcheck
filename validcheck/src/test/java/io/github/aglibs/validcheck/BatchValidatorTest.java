@@ -322,4 +322,58 @@ class BatchValidatorTest {
     assertThat(errors.get(1).message()).isEqualTo("Second error");
     assertThat(errors.get(2).message()).isEqualTo("Third error");
   }
+
+  @Test
+  void supplierOverloadsForBatchValidation() {
+    // Given
+    BatchValidator validator = ValidCheck.check();
+
+    // When - Test all uncovered Supplier overloads
+    validator
+        .hasLength("hi", 5, 10, () -> "Length error")
+        .hasSize(List.of("a"), 5, 10, () -> "Collection size error")
+        .hasSize(Map.of("k", "v"), 5, 10, () -> "Map size error")
+        .nullOrInRange(5, 10, 20, () -> "Range error")
+        .nullOrHasLength("hi", 5, 10, () -> "Length error")
+        .nullOrHasSize(List.of("a"), 5, 10, () -> "Collection size error")
+        .nullOrHasSize(Map.of("k", "v"), 5, 10, () -> "Map size error")
+        .matches("abc", "\\d+", () -> "Pattern error")
+        .matches("abc", Pattern.compile("\\d+"), () -> "Pattern error")
+        .nullOrMatches("abc", "\\d+", () -> "Pattern error")
+        .nullOrMatches("abc", Pattern.compile("\\d+"), () -> "Pattern error")
+        .min(5, 10, () -> "Min error")
+        .max(5, 3, () -> "Max error")
+        .nullOrMin(5, 10, () -> "Min error")
+        .nullOrMax(5, 3, () -> "Max error")
+        .assertFalse(true, () -> "Assert false error")
+        .notEmpty(List.of(), () -> "Empty collection error")
+        .notEmpty(Map.of(), () -> "Empty map error")
+        .notBlank("   ", () -> "Blank error")
+        .isPositive(-5, () -> "Positive error")
+        .isNegative(5, () -> "Negative error")
+        .nullOrNotEmpty("", () -> "Not empty error")
+        .nullOrNotBlank("   ", () -> "Not blank error")
+        .nullOrIsPositive(-5, () -> "Positive error")
+        .nullOrIsNegative(5, () -> "Negative error")
+        .isNonNegative(-5, () -> "Non-negative error")
+        .isNonPositive(5, () -> "Non-positive error")
+        .nullOrIsNonNegative(-5, () -> "Non-negative error")
+        .nullOrIsNonPositive(5, () -> "Non-positive error");
+
+    // Then
+    assertThat(validator.getErrors()).hasSize(29);
+  }
+
+  @Test
+  void isNullMethodsForBatchValidation() {
+    // Given
+    BatchValidator validator = ValidCheck.check();
+    String value = "not null";
+
+    // When - Test isNull variants
+    validator.isNull(value).isNull(value, "field").isNull(value, () -> "Must be null");
+
+    // Then
+    assertThat(validator.getErrors()).hasSize(3);
+  }
 }

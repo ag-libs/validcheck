@@ -62,6 +62,25 @@ public class ValidationException extends RuntimeException {
   }
 
   /**
+   * Constructs a new ValidationException with a cause.
+   *
+   * @param message the validation error message
+   * @param cause the underlying cause of the validation failure
+   */
+  public ValidationException(String message, Throwable cause) {
+    this(null, message, cause);
+  }
+
+  /**
+   * Constructs a new ValidationException with a message.
+   *
+   * @param message the validation error message
+   */
+  public ValidationException(String message) {
+    this(null, message, null);
+  }
+
+  /**
    * Returns the list of individual validation errors.
    *
    * @return an unmodifiable list of validation errors
