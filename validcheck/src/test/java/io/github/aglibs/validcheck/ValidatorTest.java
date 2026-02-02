@@ -1242,7 +1242,6 @@ class ValidatorTest {
   @Test
   void supplierOverloadsForStringValidation() {
     // Given
-    String text = "hello";
     String empty = "";
     String blank = "   ";
 
