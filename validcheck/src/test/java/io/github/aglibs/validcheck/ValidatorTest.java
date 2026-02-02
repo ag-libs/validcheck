@@ -1238,4 +1238,195 @@ class ValidatorTest {
         .isInstanceOf(ValidationException.class)
         .hasMessage("Maximum is 100");
   }
+
+  @Test
+  void supplierOverloadsForStringValidation() {
+    // Given
+    String text = "hello";
+    String empty = "";
+    String blank = "   ";
+
+    // When & Then - hasLength with supplier
+    assertThatThrownBy(() -> validator().hasLength("hi", 5, 10, () -> "Length error"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Length error");
+
+    // When & Then - nullOrHasLength with supplier
+    assertThatThrownBy(() -> validator().nullOrHasLength("hi", 5, 10, () -> "Length error"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Length error");
+
+    // When & Then - notBlank with supplier
+    assertThatThrownBy(() -> validator().notBlank(blank, () -> "Cannot be blank"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Cannot be blank");
+
+    // When & Then - nullOrNotBlank with supplier
+    assertThatThrownBy(() -> validator().nullOrNotBlank(blank, () -> "Cannot be blank"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Cannot be blank");
+
+    // When & Then - matches with String pattern and supplier
+    assertThatThrownBy(() -> validator().matches("abc", "\\d+", () -> "Must be digits"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be digits");
+
+    // When & Then - matches with Pattern and supplier
+    assertThatThrownBy(
+            () -> validator().matches("abc", Pattern.compile("\\d+"), () -> "Must be digits"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be digits");
+
+    // When & Then - nullOrMatches with String pattern and supplier
+    assertThatThrownBy(() -> validator().nullOrMatches("abc", "\\d+", () -> "Must be digits"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be digits");
+
+    // When & Then - nullOrMatches with Pattern and supplier
+    assertThatThrownBy(
+            () -> validator().nullOrMatches("abc", Pattern.compile("\\d+"), () -> "Must be digits"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be digits");
+
+    // When & Then - nullOrNotEmpty with supplier
+    assertThatThrownBy(() -> validator().nullOrNotEmpty(empty, () -> "Cannot be empty"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Cannot be empty");
+  }
+
+  @Test
+  void supplierOverloadsForCollectionValidation() {
+    // Given
+    List<String> list = List.of("a", "b");
+    Map<String, String> map = Map.of("k", "v");
+    Collection<String> empty = Collections.emptyList();
+    Map<String, String> emptyMap = Collections.emptyMap();
+
+    // When & Then - hasSize Collection with supplier
+    assertThatThrownBy(() -> validator().hasSize(list, 5, 10, () -> "Size error"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Size error");
+
+    // When & Then - hasSize Map with supplier
+    assertThatThrownBy(() -> validator().hasSize(map, 5, 10, () -> "Size error"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Size error");
+
+    // When & Then - nullOrHasSize Collection with supplier
+    assertThatThrownBy(() -> validator().nullOrHasSize(list, 5, 10, () -> "Size error"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Size error");
+
+    // When & Then - nullOrHasSize Map with supplier
+    assertThatThrownBy(() -> validator().nullOrHasSize(map, 5, 10, () -> "Size error"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Size error");
+
+    // When & Then - notEmpty Collection with supplier
+    assertThatThrownBy(() -> validator().notEmpty(empty, () -> "Cannot be empty"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Cannot be empty");
+
+    // When & Then - notEmpty Map with supplier
+    assertThatThrownBy(() -> validator().notEmpty(emptyMap, () -> "Cannot be empty"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Cannot be empty");
+  }
+
+  @Test
+  void supplierOverloadsForNumberValidation() {
+    // Given
+    Integer value = 5;
+    Integer negative = -5;
+    Integer positive = 10;
+
+    // When & Then - min with supplier
+    assertThatThrownBy(() -> validator().min(value, 10, () -> "Too small"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Too small");
+
+    // When & Then - max with supplier
+    assertThatThrownBy(() -> validator().max(value, 3, () -> "Too large"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Too large");
+
+    // When & Then - nullOrMin with supplier
+    assertThatThrownBy(() -> validator().nullOrMin(value, 10, () -> "Too small"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Too small");
+
+    // When & Then - nullOrMax with supplier
+    assertThatThrownBy(() -> validator().nullOrMax(value, 3, () -> "Too large"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Too large");
+
+    // When & Then - nullOrInRange with supplier
+    assertThatThrownBy(() -> validator().nullOrInRange(value, 10, 20, () -> "Out of range"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Out of range");
+
+    // When & Then - isPositive with supplier
+    assertThatThrownBy(() -> validator().isPositive(negative, () -> "Must be positive"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be positive");
+
+    // When & Then - isNegative with supplier
+    assertThatThrownBy(() -> validator().isNegative(positive, () -> "Must be negative"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be negative");
+
+    // When & Then - isNonNegative with supplier
+    assertThatThrownBy(() -> validator().isNonNegative(negative, () -> "Must be non-negative"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be non-negative");
+
+    // When & Then - isNonPositive with supplier
+    assertThatThrownBy(() -> validator().isNonPositive(positive, () -> "Must be non-positive"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be non-positive");
+
+    // When & Then - nullOrIsPositive with supplier
+    assertThatThrownBy(() -> validator().nullOrIsPositive(negative, () -> "Must be positive"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be positive");
+
+    // When & Then - nullOrIsNegative with supplier
+    assertThatThrownBy(() -> validator().nullOrIsNegative(positive, () -> "Must be negative"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be negative");
+
+    // When & Then - nullOrIsNonNegative with supplier
+    assertThatThrownBy(
+            () -> validator().nullOrIsNonNegative(negative, () -> "Must be non-negative"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be non-negative");
+
+    // When & Then - nullOrIsNonPositive with supplier
+    assertThatThrownBy(
+            () -> validator().nullOrIsNonPositive(positive, () -> "Must be non-positive"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be non-positive");
+  }
+
+  @Test
+  void isNullMethodVariants() {
+    // Given
+    String nonNull = "value";
+
+    // When & Then - isNull with no field name
+    assertThatThrownBy(() -> validator().isNull(nonNull)).isInstanceOf(ValidationException.class);
+
+    // When & Then - isNull with supplier
+    assertThatThrownBy(() -> validator().isNull(nonNull, () -> "Must be null"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Must be null");
+  }
+
+  @Test
+  void assertFalseWithSupplier() {
+    // When & Then - assertFalse with supplier
+    assertThatThrownBy(() -> validator().assertFalse(true, () -> "Should be false"))
+        .isInstanceOf(ValidationException.class)
+        .hasMessage("Should be false");
+  }
 }
